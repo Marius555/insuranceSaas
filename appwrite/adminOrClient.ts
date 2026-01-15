@@ -1,5 +1,5 @@
 "use server"
-import { Client, Account, Databases, Storage } from "node-appwrite";
+import { Client, Account, Databases, Storage, Teams } from "node-appwrite";
 import { cookies } from "next/headers";
 import type { AppwriteClient, ErrorResult } from "@/lib/types/appwrite";
 
@@ -28,6 +28,7 @@ export async function clientAction(): Promise<AppwriteClient | ErrorResult> {
       account: new Account(client),
       databases: new Databases(client),
       storage: new Storage(client),
+      teams: new Teams(client),
     };
   } catch (error) {
     console.error('❌ Client action initialization failed:', error);
@@ -51,5 +52,6 @@ export async function adminAction(): Promise<AppwriteClient> {
     account: new Account(client),
     databases: new Databases(client),
     storage: new Storage(client),
+    teams: new Teams(client),
   };
 }

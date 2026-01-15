@@ -1,0 +1,17 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(dir /B /S \"C:\\\\Users\\\\wanma\\\\OneDrive - Dalo6116\\\\Desktop\\\\websites\\\\insurance\")",
+      "Bash(findstr:*)",
+      "WebFetch(domain:ai.google.dev)",
+      "Bash(dir /s /b *.env*)",
+      "Bash(npx shadcn@latest add:*)",
+      "Bash(powershell -Command:*)",
+      "Bash(npm run schema:sync:*)",
+      "Bash(npx tsc:*)",
+      "Bash(timeout:*)",
+      "Bash(npx localtunnel:*)",
+      "Bash(ping:*)"
+    ]
+  }
+}

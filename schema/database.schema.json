@@ -1,0 +1,774 @@
+{
+  "version": "3.0.0",
+  "description": "Car Insurance Damage Assessment Platform - Database Schema",
+  "database": {
+    "id": "${DATABASE_ID}",
+    "name": "insurance"
+  },
+  "collections": [
+    {
+      "id": "users",
+      "name": "users",
+      "documentSecurity": true,
+      "permissions": [],
+      "attributes": [
+        {
+          "key": "full_name",
+          "type": "string",
+          "size": 255,
+          "required": true
+        },
+        {
+          "key": "email",
+          "type": "email",
+          "size": 320,
+          "required": true
+        },
+        {
+          "key": "phone",
+          "type": "string",
+          "size": 20,
+          "required": false
+        },
+        {
+          "key": "role",
+          "type": "enum",
+          "elements": ["user", "admin", "insurance_adjuster"],
+          "required": true
+        },
+        {
+          "key": "insurance_company_id",
+          "type": "string",
+          "size": 36,
+          "required": false
+        },
+        {
+          "key": "onboarding_completed",
+          "type": "boolean",
+          "required": false,
+          "default": false
+        }
+      ],
+      "indexes": [
+        {
+          "key": "email_unique",
+          "type": "unique",
+          "attributes": ["email"]
+        },
+        {
+          "key": "role_index",
+          "type": "key",
+          "attributes": ["role"]
+        },
+        {
+          "key": "insurance_company_id_index",
+          "type": "key",
+          "attributes": ["insurance_company_id"]
+        }
+      ]
+    },
+    {
+      "id": "insurance_companies",
+      "name": "insurance_companies",
+      "documentSecurity": true,
+      "permissions": [],
+      "attributes": [
+        {
+          "key": "name",
+          "type": "string",
+          "size": 255,
+          "required": true
+        },
+        {
+          "key": "company_code",
+          "type": "string",
+          "size": 50,
+          "required": true
+        },
+        {
+          "key": "team_id",
+          "type": "string",
+          "size": 36,
+          "required": false
+        },
+        {
+          "key": "contact_email",
+          "type": "email",
+          "size": 320,
+          "required": false
+        },
+        {
+          "key": "contact_phone",
+          "type": "string",
+          "size": 20,
+          "required": false
+        },
+        {
+          "key": "website",
+          "type": "url",
+          "size": 500,
+          "required": false
+        },
+        {
+          "key": "api_endpoint",
+          "type": "url",
+          "size": 500,
+          "required": false
+        },
+        {
+          "key": "is_active",
+          "type": "boolean",
+          "required": false,
+          "default": true
+        }
+      ],
+      "indexes": [
+        {
+          "key": "company_code_unique",
+          "type": "unique",
+          "attributes": ["company_code"]
+        },
+        {
+          "key": "team_id_unique",
+          "type": "unique",
+          "attributes": ["team_id"]
+        },
+        {
+          "key": "name_index",
+          "type": "key",
+          "attributes": ["name"]
+        },
+        {
+          "key": "is_active_index",
+          "type": "key",
+          "attributes": ["is_active"]
+        }
+      ]
+    },
+    {
+      "id": "claims",
+      "name": "claims",
+      "documentSecurity": true,
+      "permissions": [],
+      "attributes": [
+        {
+          "key": "user_id",
+          "type": "string",
+          "size": 36,
+          "required": true
+        },
+        {
+          "key": "insurance_company_id",
+          "type": "string",
+          "size": 36,
+          "required": false
+        },
+        {
+          "key": "claim_number",
+          "type": "string",
+          "size": 50,
+          "required": true
+        },
+        {
+          "key": "claim_status",
+          "type": "enum",
+          "elements": ["pending", "approved", "denied", "partial", "needs_investigation"],
+          "required": false,
+          "default": "pending"
+        },
+        {
+          "key": "damage_type",
+          "type": "enum",
+          "elements": ["collision", "comprehensive", "weather", "vandalism", "unknown"],
+          "required": true
+        },
+        {
+          "key": "damage_cause",
+          "type": "string",
+          "size": 500,
+          "required": false
+        },
+        {
+          "key": "overall_severity",
+          "type": "enum",
+          "elements": ["minor", "moderate", "severe", "total_loss"],
+          "required": true
+        },
+        {
+          "key": "estimated_repair_complexity",
+          "type": "enum",
+          "elements": ["simple", "moderate", "complex", "extensive"],
+          "required": true
+        },
+        {
+          "key": "estimated_total_repair_cost",
+          "type": "float",
+          "required": true,
+          "min": 0
+        },
+        {
+          "key": "confidence_score",
+          "type": "float",
+          "required": true,
+          "min": 0,
+          "max": 1
+        },
+        {
+          "key": "confidence_reasoning",
+          "type": "string",
+          "size": 1000,
+          "required": false
+        },
+        {
+          "key": "vehicle_verification_status",
+          "type": "enum",
+          "elements": ["matched", "mismatched", "insufficient_data"],
+          "required": true
+        },
+        {
+          "key": "investigation_needed",
+          "type": "boolean",
+          "required": false,
+          "default": false
+        },
+        {
+          "key": "investigation_reason",
+          "type": "string",
+          "size": 500,
+          "required": false
+        },
+        {
+          "key": "safety_concerns",
+          "type": "string",
+          "size": 1200,
+          "required": false,
+          "array": true
+        },
+        {
+          "key": "recommended_actions",
+          "type": "string",
+          "size": 1200,
+          "required": false,
+          "array": true
+        },
+        {
+          "key": "media_file_ids",
+          "type": "string",
+          "size": 36,
+          "required": false,
+          "array": true
+        },
+        {
+          "key": "policy_file_id",
+          "type": "string",
+          "size": 36,
+          "required": false
+        },
+        {
+          "key": "ai_model_used",
+          "type": "string",
+          "size": 100,
+          "required": true
+        },
+        {
+          "key": "token_usage",
+          "type": "integer",
+          "required": false,
+          "min": 0
+        },
+        {
+          "key": "analysis_timestamp",
+          "type": "datetime",
+          "required": true
+        },
+        {
+          "key": "updated_by_user_id",
+          "type": "string",
+          "size": 36,
+          "required": false
+        },
+        {
+          "key": "is_public",
+          "type": "boolean",
+          "required": false,
+          "default": false
+        }
+      ],
+      "indexes": [
+        {
+          "key": "claim_number_unique",
+          "type": "unique",
+          "attributes": ["claim_number"]
+        },
+        {
+          "key": "user_id_index",
+          "type": "key",
+          "attributes": ["user_id"]
+        },
+        {
+          "key": "insurance_company_id_index",
+          "type": "key",
+          "attributes": ["insurance_company_id"]
+        },
+        {
+          "key": "claim_status_index",
+          "type": "key",
+          "attributes": ["claim_status"]
+        },
+        {
+          "key": "analysis_timestamp_index",
+          "type": "key",
+          "attributes": ["analysis_timestamp"],
+          "orders": ["DESC"]
+        },
+        {
+          "key": "public_approved_compound",
+          "type": "key",
+          "attributes": ["is_public", "claim_status"]
+        }
+      ]
+    },
+    {
+      "id": "claim_damage_details",
+      "name": "claim_damage_details",
+      "documentSecurity": true,
+      "permissions": [],
+      "attributes": [
+        {
+          "key": "claim_id",
+          "type": "string",
+          "size": 36,
+          "required": true
+        },
+        {
+          "key": "part_name",
+          "type": "string",
+          "size": 100,
+          "required": true
+        },
+        {
+          "key": "severity",
+          "type": "enum",
+          "elements": ["minor", "moderate", "severe"],
+          "required": true
+        },
+        {
+          "key": "description",
+          "type": "string",
+          "size": 500,
+          "required": true
+        },
+        {
+          "key": "estimated_repair_cost",
+          "type": "float",
+          "required": false,
+          "min": 0
+        },
+        {
+          "key": "sort_order",
+          "type": "integer",
+          "required": true,
+          "min": 0
+        }
+      ],
+      "indexes": [
+        {
+          "key": "claim_id_index",
+          "type": "key",
+          "attributes": ["claim_id"]
+        },
+        {
+          "key": "severity_index",
+          "type": "key",
+          "attributes": ["severity"]
+        }
+      ]
+    },
+    {
+      "id": "claim_vehicle_verification",
+      "name": "claim_vehicle_verification",
+      "documentSecurity": true,
+      "permissions": [],
+      "attributes": [
+        {
+          "key": "claim_id",
+          "type": "string",
+          "size": 36,
+          "required": true
+        },
+        {
+          "key": "video_license_plate",
+          "type": "string",
+          "size": 20,
+          "required": false
+        },
+        {
+          "key": "video_vin",
+          "type": "string",
+          "size": 20,
+          "required": false
+        },
+        {
+          "key": "video_make",
+          "type": "string",
+          "size": 50,
+          "required": false
+        },
+        {
+          "key": "video_model",
+          "type": "string",
+          "size": 50,
+          "required": false
+        },
+        {
+          "key": "video_year",
+          "type": "integer",
+          "required": false,
+          "min": 1900,
+          "max": 2100
+        },
+        {
+          "key": "video_color",
+          "type": "string",
+          "size": 30,
+          "required": false
+        },
+        {
+          "key": "policy_license_plate",
+          "type": "string",
+          "size": 20,
+          "required": false
+        },
+        {
+          "key": "policy_vin",
+          "type": "string",
+          "size": 20,
+          "required": false
+        },
+        {
+          "key": "policy_make",
+          "type": "string",
+          "size": 50,
+          "required": false
+        },
+        {
+          "key": "policy_model",
+          "type": "string",
+          "size": 50,
+          "required": false
+        },
+        {
+          "key": "policy_year",
+          "type": "integer",
+          "required": false,
+          "min": 1900,
+          "max": 2100
+        },
+        {
+          "key": "policy_color",
+          "type": "string",
+          "size": 30,
+          "required": false
+        },
+        {
+          "key": "verification_status",
+          "type": "enum",
+          "elements": ["matched", "mismatched", "insufficient_data"],
+          "required": true
+        },
+        {
+          "key": "mismatches",
+          "type": "string",
+          "size": 500,
+          "required": false
+        },
+        {
+          "key": "confidence_score",
+          "type": "float",
+          "required": true,
+          "min": 0,
+          "max": 1
+        },
+        {
+          "key": "notes",
+          "type": "string",
+          "size": 1000,
+          "required": false
+        }
+      ],
+      "indexes": [
+        {
+          "key": "claim_id_unique",
+          "type": "unique",
+          "attributes": ["claim_id"]
+        },
+        {
+          "key": "verification_status_index",
+          "type": "key",
+          "attributes": ["verification_status"]
+        }
+      ]
+    },
+    {
+      "id": "claim_assessments",
+      "name": "claim_assessments",
+      "documentSecurity": true,
+      "permissions": [],
+      "attributes": [
+        {
+          "key": "claim_id",
+          "type": "string",
+          "size": 36,
+          "required": true
+        },
+        {
+          "key": "coverage_types",
+          "type": "string",
+          "size": 100,
+          "required": false,
+          "array": true
+        },
+        {
+          "key": "deductible_types",
+          "type": "string",
+          "size": 50,
+          "required": false,
+          "array": true
+        },
+        {
+          "key": "deductible_amounts",
+          "type": "float",
+          "required": false,
+          "array": true
+        },
+        {
+          "key": "exclusions",
+          "type": "string",
+          "size": 1200,
+          "required": false,
+          "array": true
+        },
+        {
+          "key": "coverage_limit_collision",
+          "type": "float",
+          "required": false,
+          "min": 0
+        },
+        {
+          "key": "coverage_limit_comprehensive",
+          "type": "float",
+          "required": false,
+          "min": 0
+        },
+        {
+          "key": "coverage_limit_liability",
+          "type": "float",
+          "required": false,
+          "min": 0
+        },
+        {
+          "key": "relevant_policy_sections",
+          "type": "string",
+          "size": 1200,
+          "required": false,
+          "array": true
+        },
+        {
+          "key": "assessment_status",
+          "type": "enum",
+          "elements": ["approved", "denied", "partial", "needs_investigation"],
+          "required": true
+        },
+        {
+          "key": "covered_damages",
+          "type": "string",
+          "size": 1200,
+          "required": false,
+          "array": true
+        },
+        {
+          "key": "excluded_damages",
+          "type": "string",
+          "size": 1200,
+          "required": false,
+          "array": true
+        },
+        {
+          "key": "total_repair_estimate",
+          "type": "float",
+          "required": true,
+          "min": 0
+        },
+        {
+          "key": "covered_amount",
+          "type": "float",
+          "required": true,
+          "min": 0
+        },
+        {
+          "key": "deductible",
+          "type": "float",
+          "required": true,
+          "min": 0
+        },
+        {
+          "key": "non_covered_items",
+          "type": "float",
+          "required": false,
+          "default": 0,
+          "min": 0
+        },
+        {
+          "key": "estimated_payout",
+          "type": "float",
+          "required": true,
+          "min": 0
+        },
+        {
+          "key": "reasoning",
+          "type": "string",
+          "size": 2000,
+          "required": false
+        },
+        {
+          "key": "policy_references",
+          "type": "string",
+          "size": 1200,
+          "required": false,
+          "array": true
+        }
+      ],
+      "indexes": [
+        {
+          "key": "claim_id_unique",
+          "type": "unique",
+          "attributes": ["claim_id"]
+        },
+        {
+          "key": "assessment_status_index",
+          "type": "key",
+          "attributes": ["assessment_status"]
+        }
+      ]
+    },
+    {
+      "id": "audit_logs",
+      "name": "audit_logs",
+      "documentSecurity": false,
+      "permissions": [],
+      "attributes": [
+        {
+          "key": "user_id",
+          "type": "string",
+          "size": 36,
+          "required": false
+        },
+        {
+          "key": "action",
+          "type": "enum",
+          "elements": [
+            "analyze_video",
+            "analyze_image",
+            "analyze_policy",
+            "create_claim",
+            "update_claim",
+            "delete_claim",
+            "user_login",
+            "user_logout"
+          ],
+          "required": true
+        },
+        {
+          "key": "resource_type",
+          "type": "enum",
+          "elements": ["claim", "analysis", "user", "insurance_company"],
+          "required": true
+        },
+        {
+          "key": "resource_id",
+          "type": "string",
+          "size": 36,
+          "required": false
+        },
+        {
+          "key": "result",
+          "type": "enum",
+          "elements": ["success", "error", "flagged"],
+          "required": true
+        },
+        {
+          "key": "file_hashes",
+          "type": "string",
+          "size": 64,
+          "required": false,
+          "array": true
+        },
+        {
+          "key": "security_flags",
+          "type": "string",
+          "size": 100,
+          "required": false,
+          "array": true
+        },
+        {
+          "key": "token_usage",
+          "type": "integer",
+          "required": false,
+          "min": 0
+        },
+        {
+          "key": "ip_address",
+          "type": "string",
+          "size": 45,
+          "required": false
+        },
+        {
+          "key": "user_agent",
+          "type": "string",
+          "size": 500,
+          "required": false
+        },
+        {
+          "key": "error_message",
+          "type": "string",
+          "size": 1000,
+          "required": false
+        },
+        {
+          "key": "metadata",
+          "type": "string",
+          "size": 5000,
+          "required": false
+        }
+      ],
+      "indexes": [
+        {
+          "key": "user_id_index",
+          "type": "key",
+          "attributes": ["user_id"]
+        },
+        {
+          "key": "action_index",
+          "type": "key",
+          "attributes": ["action"]
+        },
+        {
+          "key": "created_at_index",
+          "type": "key",
+          "attributes": ["$createdAt"],
+          "orders": ["DESC"]
+        },
+        {
+          "key": "result_index",
+          "type": "key",
+          "attributes": ["result"]
+        },
+        {
+          "key": "resource_lookup",
+          "type": "key",
+          "attributes": ["resource_type", "resource_id"]
+        }
+      ]
+    }
+  ]
+}
