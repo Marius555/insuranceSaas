@@ -24,9 +24,9 @@ export function ClaimUploadModal({ userId, children }: ClaimUploadModalProps) {
   const [activeTab, setActiveTab] = useState("quick");
 
   const handleSuccess = (claimId: string) => {
-    setOpen(false);
-    setActiveTab("quick");
-    router.push(`/claims/${claimId}`);
+    // Don't close modal - let navigation unmount it naturally
+    // This ensures user sees the redirecting state until new page loads
+    router.push(`/auth/claims/${claimId}`);
   };
 
   return (
@@ -41,7 +41,7 @@ export function ClaimUploadModal({ userId, children }: ClaimUploadModalProps) {
         </DialogHeader>
 
         <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 flex flex-col overflow-hidden min-h-0">
-          <TabsList className="grid w-full grid-cols-2 flex-shrink-0">
+          <TabsList className="grid w-full grid-cols-2 shrink-0">
             <TabsTrigger value="quick">Quick Analysis</TabsTrigger>
             <TabsTrigger value="policy">Policy Analysis</TabsTrigger>
           </TabsList>

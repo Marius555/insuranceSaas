@@ -3,6 +3,7 @@ import { config } from 'dotenv';
 config();
 
 import { adminAction } from '../appwrite/adminOrClient';
+import { IndexType } from 'node-appwrite';
 import type { Databases } from 'node-appwrite';
 import * as fs from 'fs/promises';
 import * as path from 'path';
@@ -314,7 +315,7 @@ async function createIndexes(
         databaseId,
         collectionId,
         index.key,
-        index.type,
+        index.type as IndexType,
         index.attributes,
         index.orders ?? []
       );

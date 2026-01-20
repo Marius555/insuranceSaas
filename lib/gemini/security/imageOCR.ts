@@ -39,7 +39,7 @@ export async function extractImageText(
       },
     });
 
-    const text = response.text.trim();
+    const text = (response.text ?? '').trim();
 
     // Return empty string if no text found
     if (text === "NO_TEXT_FOUND") {

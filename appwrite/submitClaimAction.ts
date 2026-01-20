@@ -18,7 +18,7 @@ import { getSession } from '@/appwrite/getSession';
  *
  * const result = await submitClaimAction(formData);
  * if (result.success) {
- *   router.push(`/claims/${result.claimId}`);
+ *   router.push(`/auth/claims/${result.claimId}`);
  * }
  */
 export async function submitClaimAction(formData: FormData) {

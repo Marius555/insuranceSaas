@@ -136,6 +136,88 @@ export interface DamagedPart {
   part: string;
   severity: 'minor' | 'moderate' | 'severe'; // Must match database schema constraint
   description: string;
+  estimatedRepairCost?: string; // Cost range e.g., "$500 - $800"
+  // Fraud detection fields
+  damageAge?: 'fresh' | 'days_old' | 'weeks_old' | 'months_old' | 'unknown';
+  ageIndicators?: string[];
+  rustPresent?: boolean;
+  preExisting?: boolean;
+}
+
+// ========================================
+// Fraud Detection Types - Damage Age Assessment
+// ========================================
+
+export interface DamageAgeIndicator {
+  type: 'oxidation' | 'rust' | 'paint_weathering' | 'edge_condition' | 'debris_accumulation';
+  observation: string;
+  ageImplication: string;
+}
+
+export interface DamageAgeAssessment {
+  estimatedAge: 'fresh' | 'days_old' | 'weeks_old' | 'months_old' | 'unknown';
+  confidenceScore: number; // 0-1
+  indicators: DamageAgeIndicator[];
+  reasoning: string;
+}
+
+// ========================================
+// Fraud Detection Types - Surface Contamination
+// ========================================
+
+export interface ContaminantDetail {
+  type: 'dirt' | 'grime' | 'dust' | 'snow' | 'ice' | 'salt' | 'water_stains' | 'oil' | 'other';
+  location: string;
+  obscuresDamage: boolean;
+  description: string;
+}
+
+export interface ContaminationAssessment {
+  contaminationDetected: boolean;
+  contaminants: ContaminantDetail[];
+  fraudRiskLevel: 'low' | 'medium' | 'high';
+  notes: string;
+}
+
+// ========================================
+// Fraud Detection Types - Rust/Corrosion
+// ========================================
+
+export interface CorrosionDetail {
+  location: string;
+  severity: 'surface_rust' | 'pitting' | 'deep_corrosion' | 'structural';
+  color: string; // "bright orange" = fresh, "dark brown/black" = old
+  spreadPattern: string;
+  estimatedAge: string;
+}
+
+export interface RustCorrosionAssessment {
+  rustDetected: boolean;
+  corrosionAreas: CorrosionDetail[];
+  overallCorrosionLevel: 'none' | 'minimal' | 'moderate' | 'severe';
+  estimatedCorrosionAge: string;
+  fraudIndicator: boolean;
+  notes: string;
+}
+
+// ========================================
+// Fraud Detection Types - Pre-Existing Damage
+// ========================================
+
+export interface PreExistingDamageItem {
+  location: string;
+  damageType: string;
+  ageEstimate: string;
+  reasoning: string;
+  relatedToClaimedIncident: boolean;
+}
+
+export interface PreExistingDamageAssessment {
+  preExistingDamageDetected: boolean;
+  preExistingItems: PreExistingDamageItem[];
+  damageConsistency: 'consistent' | 'inconsistent' | 'mixed' | 'unclear';
+  fraudRiskLevel: 'low' | 'medium' | 'high';
+  notes: string;
 }
 
 export interface AutoDamageAnalysis {
@@ -205,6 +287,11 @@ export interface EnhancedAutoDamageAnalysis extends AutoDamageAnalysis {
   investigationNeeded: boolean;
   investigationReason: string | null;
   confidenceReasoning: string;
+  // Fraud detection assessments
+  damageAgeAssessment?: DamageAgeAssessment;
+  contaminationAssessment?: ContaminationAssessment;
+  rustCorrosionAssessment?: RustCorrosionAssessment;
+  preExistingDamageAssessment?: PreExistingDamageAssessment;
 }
 
 export interface PolicyDocumentInput {

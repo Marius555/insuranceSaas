@@ -177,6 +177,60 @@ export async function validateAutoDamageAnalysis(
       warnings.push('Claim denied by AI with high confidence. Verify denial reasons are valid.');
       flaggedReasons.push('high_confidence_denial');
     }
+
+    // Rule 11: Damage age inconsistency with claim date
+    if (analysis.damageAgeAssessment) {
+      const age = analysis.damageAgeAssessment.estimatedAge;
+      if (age === 'weeks_old' || age === 'months_old') {
+        warnings.push(
+          `Damage appears ${age.replace('_', ' ')} - may not match recent claim date. Manual verification required.`
+        );
+        flaggedReasons.push('damage_age_suspicious');
+        requiresManualReview = true;
+      }
+    }
+
+    // Rule 12: Rust at fresh damage sites (fraud indicator)
+    if (analysis.rustCorrosionAssessment?.fraudIndicator) {
+      warnings.push(
+        'Rust/corrosion detected at claimed damage sites - inconsistent with fresh damage claim.'
+      );
+      flaggedReasons.push('rust_fraud_indicator');
+      requiresManualReview = true;
+    }
+
+    // Rule 13: Pre-existing damage detected
+    if (analysis.preExistingDamageAssessment?.preExistingDamageDetected) {
+      const riskLevel = analysis.preExistingDamageAssessment.fraudRiskLevel;
+      warnings.push(
+        `Pre-existing damage detected (Risk: ${riskLevel}). Manual review required to separate from claimed incident.`
+      );
+      flaggedReasons.push('pre_existing_damage');
+      if (riskLevel === 'high') {
+        requiresManualReview = true;
+      }
+    }
+
+    // Rule 14: Contamination obscuring damage
+    if (analysis.contaminationAssessment?.contaminationDetected) {
+      const obscuring = analysis.contaminationAssessment.contaminants.filter(c => c.obscuresDamage);
+      if (obscuring.length > 0) {
+        warnings.push(
+          `Contamination (${obscuring.map(c => c.type).join(', ')}) obscuring damage areas. May hide damage age indicators.`
+        );
+        flaggedReasons.push('contamination_obscuring');
+        requiresManualReview = true;
+      }
+    }
+
+    // Rule 15: Damage consistency check
+    if (analysis.preExistingDamageAssessment?.damageConsistency === 'inconsistent') {
+      warnings.push(
+        'Multiple damage ages detected - claimed damage may include pre-existing issues.'
+      );
+      flaggedReasons.push('damage_consistency_issue');
+      requiresManualReview = true;
+    }
   }
 
   return {

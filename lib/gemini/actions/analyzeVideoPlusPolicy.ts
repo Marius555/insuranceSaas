@@ -86,9 +86,59 @@ Analyze the provided car damage video AND insurance policy document to determine
 Carefully review the damage video and identify:
 1. ALL damaged parts (be thorough)
 2. Severity of each damaged part (minor/moderate/severe)
-3. Likely cause of damage (collision, hail, vandalism, wear-and-tear, etc.)
-4. Estimated total repair cost
-5. Safety concerns from the damage
+3. **Estimated repair cost RANGE for each part** (e.g., "$500 - $800")
+4. Likely cause of damage (collision, hail, vandalism, wear-and-tear, etc.)
+5. Estimated total repair cost
+6. Safety concerns from the damage
+
+### STEP 1.5: DAMAGE FRESHNESS ANALYSIS (FRAUD PREVENTION)
+
+This is CRITICAL for detecting fraudulent claims where old damage is claimed as new.
+
+**ANALYZE EACH DAMAGED AREA FOR AGE INDICATORS:**
+
+1. **Metal Oxidation Check** (Most Reliable Indicator)
+   - FRESH (0-48 hrs): Exposed metal is bright silver/shiny
+   - DAYS OLD (2-7 days): Light orange-brown discoloration appearing
+   - WEEKS OLD (1-4 weeks): Clear orange rust, beginning to spread
+   - MONTHS OLD (4+ weeks): Dark brown/black rust with pitting
+
+2. **Paint Edge Analysis**
+   - FRESH: Clean, sharp edges on paint chips/scratches
+   - OLD: Weathered edges, chalking, secondary chipping
+
+3. **Debris Accumulation Check**
+   - FRESH: Clean damage area, no accumulated dirt/grime
+   - OLD: Dirt in scratches, grime in dents, debris in crevices
+   - SUSPICIOUS: Fresh damage covered with dirt (possible staging)
+
+4. **Rust Pattern Analysis**
+   For each rust spot identified:
+   - Location relative to claimed damage
+   - Color gradation (center vs edges)
+   - Spread pattern (localized vs creeping)
+   - Correlation with other damage
+
+5. **Pre-Existing vs Claimed Damage**
+   Look for:
+   - Multiple damage ages on same vehicle
+   - Old repairs showing through
+   - Inconsistent damage patterns
+   - Damage inconsistent with claimed incident type
+
+**RED FLAGS FOR FRAUD:**
+- Fresh collision damage but old rust at impact points
+- Dirt/grime in "fresh" scratches
+- Multiple ages of damage claimed as single incident
+- Damage pattern inconsistent with claimed cause
+- Snow/ice covering damage (hiding age indicators)
+- Clean vehicle but dirty damage areas (or vice versa)
+
+For each damaged part, include:
+- damageAge: "fresh" | "days_old" | "weeks_old" | "months_old" | "unknown"
+- ageIndicators: Array of observed indicators
+- rustPresent: boolean
+- preExisting: boolean
 
 ### STEP 2: VIDEO ANALYSIS - Vehicle Identification (CRITICAL for fraud prevention)
 Extract ALL visible vehicle identification details from the video:
@@ -170,17 +220,17 @@ For EACH field where you have data from BOTH sources, compare:
 
 Apply these rules IN ORDER:
 
-1. If ANY HIGH PRIORITY field mismatches → \`verificationStatus: "mismatched"\`
-   - License plate mismatch → mismatched
-   - VIN mismatch → mismatched
-   - Make/Model mismatch → mismatched
+1. If License Plate or VIN MISMATCH (different values in media vs policy) → "mismatched"
 
-2. If NO high-priority fields available for comparison → \`verificationStatus: "insufficient_data"\`
-   - Example: No plate visible, no VIN visible, can't identify make/model
+2. If at least ONE of these is true → "matched":
+   - License Plate visible in media AND matches policy exactly
+   - VIN visible in media AND matches policy exactly
 
-3. If ≥2 high-priority fields match AND no mismatches → \`verificationStatus: "matched"\`
+3. OTHERWISE → "insufficient_data"
+   - This includes: policy missing both plate/VIN, media missing both plate/VIN, or only make/model/year/color available
 
-4. Otherwise → \`verificationStatus: "insufficient_data"\`
+**CRITICAL:** Make/Model/Year/Color matching alone is NOT sufficient for "matched" status.
+A vehicle cannot be positively verified without at least one unique identifier (plate or VIN).
 
 **STEP 5E: Populate Verification Object**
 
@@ -265,7 +315,11 @@ Return ONLY valid JSON (no markdown) with this exact structure:
       "part": "front bumper",
       "severity": "severe",
       "description": "detailed description",
-      "estimatedRepairCost": 1500
+      "estimatedRepairCost": "$1,200 - $1,800",
+      "damageAge": "fresh",
+      "ageIndicators": ["Shiny exposed metal", "Clean paint edges"],
+      "rustPresent": false,
+      "preExisting": false
     }
   ],
   "overallSeverity": "severe",
@@ -291,10 +345,10 @@ Return ONLY valid JSON (no markdown) with this exact structure:
       "year": 2018,          // Listed in policy
       "color": "White"       // Listed as "Oxford White"
     },
-    "verificationStatus": "matched",
+    "verificationStatus": "insufficient_data",
     "mismatches": [],
-    "confidenceScore": 0.87,
-    "notes": "Make, model, year, and color match between video and policy. License plate and VIN not available for comparison but other fields provide sufficient verification. Color variation (White vs Oxford White) is same color family."
+    "confidenceScore": 0.60,
+    "notes": "Cannot verify vehicle identity - neither license plate nor VIN available for comparison. Make/model/year/color match but are insufficient for positive identification."
   },
 
   "policyAnalysis": {
@@ -336,6 +390,64 @@ Return ONLY valid JSON (no markdown) with this exact structure:
     ]
   },
 
+  "damageAgeAssessment": {
+    "estimatedAge": "fresh",
+    "confidenceScore": 0.90,
+    "indicators": [
+      {
+        "type": "oxidation",
+        "observation": "Exposed metal on bumper bracket is bright silver",
+        "ageImplication": "Damage occurred within 24-48 hours"
+      },
+      {
+        "type": "edge_condition",
+        "observation": "Paint chip edges are clean and sharp",
+        "ageImplication": "No weathering indicates recent damage"
+      }
+    ],
+    "reasoning": "All damage indicators point to recent incident. No oxidation or weathering observed on collision damage."
+  },
+
+  "contaminationAssessment": {
+    "contaminationDetected": false,
+    "contaminants": [],
+    "fraudRiskLevel": "low",
+    "notes": "Damage areas are clean and consistent with recent collision"
+  },
+
+  "rustCorrosionAssessment": {
+    "rustDetected": true,
+    "corrosionAreas": [
+      {
+        "location": "undercarriage frame rail",
+        "severity": "surface_rust",
+        "color": "dark brown",
+        "spreadPattern": "localized patches",
+        "estimatedAge": "months to years - unrelated to claimed incident"
+      }
+    ],
+    "overallCorrosionLevel": "minimal",
+    "estimatedCorrosionAge": "Pre-existing, unrelated to collision",
+    "fraudIndicator": false,
+    "notes": "Undercarriage rust is normal wear, not related to claimed collision damage"
+  },
+
+  "preExistingDamageAssessment": {
+    "preExistingDamageDetected": true,
+    "preExistingItems": [
+      {
+        "location": "undercarriage",
+        "damageType": "surface rust",
+        "ageEstimate": "Months to years old",
+        "reasoning": "Dark brown oxidation with localized pattern indicates long-term environmental exposure",
+        "relatedToClaimedIncident": false
+      }
+    ],
+    "damageConsistency": "consistent",
+    "fraudRiskLevel": "low",
+    "notes": "Pre-existing undercarriage rust clearly separate from fresh collision damage. No attempt to include old damage in claim."
+  },
+
   "recommendedActions": [
     "Approve claim for $7,500 payout",
     "Require repair at approved facility",
@@ -352,7 +464,7 @@ Return ONLY valid JSON (no markdown) with this exact structure:
   ],
 
   "confidence": 0.92,
-  "confidenceReasoning": "Clear collision damage visible in video. Policy language is straightforward. Minor uncertainty about pre-existing rust extent."
+  "confidenceReasoning": "Clear collision damage visible in video. Policy language is straightforward. Damage freshness indicators support recent incident. Pre-existing rust clearly separated from claimed damage."
 }
 
 ## COVERAGE LIMIT EXTRACTION RULES

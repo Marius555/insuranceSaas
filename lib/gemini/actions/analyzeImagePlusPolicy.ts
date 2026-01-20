@@ -106,6 +106,14 @@ You MUST produce identical outputs for identical inputs. Follow these rules:
 5. Be deterministic in your reasoning process
 `;
 
+    // Sort images for consistent ordering
+    const sortedImages = [...images].sort((a, b) => {
+      // Sort by angle if available, otherwise maintain original order
+      const angleA = a.angle || '';
+      const angleB = b.angle || '';
+      return angleA.localeCompare(angleB);
+    });
+
     const anglesInfo = sortedImages
       .map((img, idx) => img.angle || `Image ${idx + 1}`)
       .join(', ');
@@ -147,9 +155,59 @@ Images provided: ${anglesInfo}
 Carefully review the ${images.length} damage image(s) and identify:
 1. ALL damaged parts (be thorough, consider all angles)
 2. Severity of each damaged part (minor/moderate/severe)
-3. Likely cause of damage (collision, hail, vandalism, wear-and-tear, etc.)
-4. Estimated total repair cost
-5. Safety concerns from the damage
+3. **Estimated repair cost RANGE for each part** (e.g., "$500 - $800")
+4. Likely cause of damage (collision, hail, vandalism, wear-and-tear, etc.)
+5. Estimated total repair cost
+6. Safety concerns from the damage
+
+### STEP 1.5: DAMAGE FRESHNESS ANALYSIS (FRAUD PREVENTION)
+
+This is CRITICAL for detecting fraudulent claims where old damage is claimed as new.
+
+**ANALYZE EACH DAMAGED AREA FOR AGE INDICATORS:**
+
+1. **Metal Oxidation Check** (Most Reliable Indicator)
+   - FRESH (0-48 hrs): Exposed metal is bright silver/shiny
+   - DAYS OLD (2-7 days): Light orange-brown discoloration appearing
+   - WEEKS OLD (1-4 weeks): Clear orange rust, beginning to spread
+   - MONTHS OLD (4+ weeks): Dark brown/black rust with pitting
+
+2. **Paint Edge Analysis**
+   - FRESH: Clean, sharp edges on paint chips/scratches
+   - OLD: Weathered edges, chalking, secondary chipping
+
+3. **Debris Accumulation Check**
+   - FRESH: Clean damage area, no accumulated dirt/grime
+   - OLD: Dirt in scratches, grime in dents, debris in crevices
+   - SUSPICIOUS: Fresh damage covered with dirt (possible staging)
+
+4. **Rust Pattern Analysis**
+   For each rust spot identified:
+   - Location relative to claimed damage
+   - Color gradation (center vs edges)
+   - Spread pattern (localized vs creeping)
+   - Correlation with other damage
+
+5. **Pre-Existing vs Claimed Damage**
+   Look for:
+   - Multiple damage ages on same vehicle
+   - Old repairs showing through
+   - Inconsistent damage patterns
+   - Damage inconsistent with claimed incident type
+
+**RED FLAGS FOR FRAUD:**
+- Fresh collision damage but old rust at impact points
+- Dirt/grime in "fresh" scratches
+- Multiple ages of damage claimed as single incident
+- Damage pattern inconsistent with claimed cause
+- Snow/ice covering damage (hiding age indicators)
+- Clean vehicle but dirty damage areas (or vice versa)
+
+For each damaged part, include:
+- damageAge: "fresh" | "days_old" | "weeks_old" | "months_old" | "unknown"
+- ageIndicators: Array of observed indicators
+- rustPresent: boolean
+- preExisting: boolean
 
 ### STEP 2: IMAGE ANALYSIS - Vehicle Identification (CRITICAL for fraud prevention)
 Extract ALL visible vehicle identification details from the images:
@@ -231,17 +289,17 @@ For EACH field where you have data from BOTH sources, compare:
 
 Apply these rules IN ORDER:
 
-1. If ANY HIGH PRIORITY field mismatches → \`verificationStatus: "mismatched"\`
-   - License plate mismatch → mismatched
-   - VIN mismatch → mismatched
-   - Make/Model mismatch → mismatched
+1. If License Plate or VIN MISMATCH (different values in media vs policy) → "mismatched"
 
-2. If NO high-priority fields available for comparison → \`verificationStatus: "insufficient_data"\`
-   - Example: No plate visible, no VIN visible, can't identify make/model
+2. If at least ONE of these is true → "matched":
+   - License Plate visible in media AND matches policy exactly
+   - VIN visible in media AND matches policy exactly
 
-3. If ≥2 high-priority fields match AND no mismatches → \`verificationStatus: "matched"\`
+3. OTHERWISE → "insufficient_data"
+   - This includes: policy missing both plate/VIN, media missing both plate/VIN, or only make/model/year/color available
 
-4. Otherwise → \`verificationStatus: "insufficient_data"\`
+**CRITICAL:** Make/Model/Year/Color matching alone is NOT sufficient for "matched" status.
+A vehicle cannot be positively verified without at least one unique identifier (plate or VIN).
 
 **STEP 5E: Populate Verification Object**
 
@@ -326,7 +384,11 @@ Return ONLY valid JSON (no markdown) with this exact structure:
       "part": "front bumper",
       "severity": "severe",
       "description": "detailed description",
-      "estimatedRepairCost": 1500
+      "estimatedRepairCost": "$1,200 - $1,800",
+      "damageAge": "fresh",
+      "ageIndicators": ["Shiny exposed metal", "Clean paint edges"],
+      "rustPresent": false,
+      "preExisting": false
     }
   ],
   "overallSeverity": "severe",
@@ -352,10 +414,10 @@ Return ONLY valid JSON (no markdown) with this exact structure:
       "year": 2019,          // Listed in policy
       "color": "Red"         // Listed as "Milano Red"
     },
-    "verificationStatus": "matched",
+    "verificationStatus": "insufficient_data",
     "mismatches": [],
-    "confidenceScore": 0.85,
-    "notes": "Make, model, year, and color match between images and policy. License plate and VIN not available for comparison but other fields provide sufficient verification."
+    "confidenceScore": 0.60,
+    "notes": "Cannot verify vehicle identity - neither license plate nor VIN available for comparison. Make/model/year/color match but are insufficient for positive identification."
   },
 
   "policyAnalysis": {
@@ -389,6 +451,48 @@ Return ONLY valid JSON (no markdown) with this exact structure:
     "policyReferences": ["Section 3.2: Collision coverage"]
   },
 
+  "damageAgeAssessment": {
+    "estimatedAge": "fresh",
+    "confidenceScore": 0.90,
+    "indicators": [
+      {
+        "type": "oxidation",
+        "observation": "Exposed metal on bumper bracket is bright silver",
+        "ageImplication": "Damage occurred within 24-48 hours"
+      },
+      {
+        "type": "edge_condition",
+        "observation": "Paint chip edges are clean and sharp",
+        "ageImplication": "No weathering indicates recent damage"
+      }
+    ],
+    "reasoning": "All damage indicators point to recent incident. No oxidation or weathering observed."
+  },
+
+  "contaminationAssessment": {
+    "contaminationDetected": false,
+    "contaminants": [],
+    "fraudRiskLevel": "low",
+    "notes": "Damage areas are clean and consistent with recent collision"
+  },
+
+  "rustCorrosionAssessment": {
+    "rustDetected": false,
+    "corrosionAreas": [],
+    "overallCorrosionLevel": "none",
+    "estimatedCorrosionAge": "N/A",
+    "fraudIndicator": false,
+    "notes": "No rust or corrosion detected at damage sites"
+  },
+
+  "preExistingDamageAssessment": {
+    "preExistingDamageDetected": false,
+    "preExistingItems": [],
+    "damageConsistency": "consistent",
+    "fraudRiskLevel": "low",
+    "notes": "All visible damage appears consistent with single claimed incident"
+  },
+
   "recommendedActions": [
     "Approve claim for $7,500 payout"
   ],
@@ -399,7 +503,7 @@ Return ONLY valid JSON (no markdown) with this exact structure:
   "safetyConcerns": [],
 
   "confidence": 0.92,
-  "confidenceReasoning": "Clear collision damage visible in images. Policy language is straightforward."
+  "confidenceReasoning": "Clear collision damage visible in images. Policy language is straightforward. Damage freshness indicators support recent incident."
 }
 
 ## COVERAGE LIMIT EXTRACTION RULES
@@ -424,14 +528,6 @@ IMPORTANT: Do NOT convert insurance terms to numbers. Return them as strings exa
 5. Calculate accurate financial breakdowns
 6. Consider edge cases (pre-existing damage, multiple causes, etc.)
 7. Return ONLY the JSON object (no markdown formatting)`;
-
-    // Sort images for consistent ordering
-    const sortedImages = [...images].sort((a, b) => {
-      // Sort by angle if available, otherwise maintain original order
-      const angleA = a.angle || '';
-      const angleB = b.angle || '';
-      return angleA.localeCompare(angleB);
-    });
 
     // Build content parts with all images + PDF
     const contentParts = [

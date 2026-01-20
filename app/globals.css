@@ -50,71 +50,70 @@
 :root {
   --radius: 0.65rem;
   --background: oklch(1 0 0);
-  --foreground: oklch(0.145 0 0);
+  --foreground: oklch(0.141 0.005 285.823);
   --card: oklch(1 0 0);
-  --card-foreground: oklch(0.145 0 0);
+  --card-foreground: oklch(0.141 0.005 285.823);
   --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.145 0 0);
-  --primary: oklch(0.205 0 0);
-  --primary-foreground: oklch(0.985 0 0);
-  --secondary: oklch(0.97 0 0);
-  --secondary-foreground: oklch(0.205 0 0);
-  --muted: oklch(0.97 0 0);
-  --muted-foreground: oklch(0.556 0 0);
-  --accent: oklch(0.97 0 0);
-  --accent-foreground: oklch(0.205 0 0);
+  --popover-foreground: oklch(0.141 0.005 285.823);
+  --primary: oklch(0.586 0.253 17.585);
+  --primary-foreground: oklch(0.969 0.015 12.422);
+  --secondary: oklch(0.967 0.001 286.375);
+  --secondary-foreground: oklch(0.21 0.006 285.885);
+  --muted: oklch(0.967 0.001 286.375);
+  --muted-foreground: oklch(0.552 0.016 285.938);
+  --accent: oklch(0.967 0.001 286.375);
+  --accent-foreground: oklch(0.21 0.006 285.885);
   --destructive: oklch(0.577 0.245 27.325);
-  --border: oklch(0.922 0 0);
-  --input: oklch(0.922 0 0);
-  --ring: oklch(0.708 0 0);
-  --chart-1: oklch(0.646 0.222 41.116);
-  --chart-2: oklch(0.6 0.118 184.704);
-  --chart-3: oklch(0.398 0.07 227.392);
-  --chart-4: oklch(0.828 0.189 84.429);
-  --chart-5: oklch(0.769 0.188 70.08);
-  --radius: 0.625rem;
+  --border: oklch(0.92 0.004 286.32);
+  --input: oklch(0.92 0.004 286.32);
+  --ring: oklch(0.712 0.194 13.428);
+  --chart-1: oklch(0.81 0.117 11.638);
+  --chart-2: oklch(0.645 0.246 16.439);
+  --chart-3: oklch(0.586 0.253 17.585);
+  --chart-4: oklch(0.514 0.222 16.935);
+  --chart-5: oklch(0.455 0.188 13.697);
   --sidebar: oklch(0.985 0 0);
-  --sidebar-foreground: oklch(0.145 0 0);
-  --sidebar-primary: oklch(0.205 0 0);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.97 0 0);
-  --sidebar-accent-foreground: oklch(0.205 0 0);
-  --sidebar-border: oklch(0.922 0 0);
-  --sidebar-ring: oklch(0.708 0 0);
+  --sidebar-foreground: oklch(0.141 0.005 285.823);
+  --sidebar-primary: oklch(0.586 0.253 17.585);
+  --sidebar-primary-foreground: oklch(0.969 0.015 12.422);
+  --sidebar-accent: oklch(0.967 0.001 286.375);
+  --sidebar-accent-foreground: oklch(0.21 0.006 285.885);
+  --sidebar-border: oklch(0.92 0.004 286.32);
+  --sidebar-ring: oklch(0.712 0.194 13.428);
 }
 
 .dark {
-  --background: oklch(0.145 0 0);
+  --background: oklch(0.141 0.005 285.823);
   --foreground: oklch(0.985 0 0);
-  --card: oklch(0.205 0 0);
+  --card: oklch(0.21 0.006 285.885);
   --card-foreground: oklch(0.985 0 0);
-  --popover: oklch(0.205 0 0);
+  --popover: oklch(0.21 0.006 285.885);
   --popover-foreground: oklch(0.985 0 0);
-  --primary: oklch(0.922 0 0);
-  --primary-foreground: oklch(0.205 0 0);
-  --secondary: oklch(0.269 0 0);
+  --primary: oklch(0.645 0.246 16.439);
+  --primary-foreground: oklch(0.969 0.015 12.422);
+  --secondary: oklch(0.274 0.006 286.033);
   --secondary-foreground: oklch(0.985 0 0);
-  --muted: oklch(0.269 0 0);
-  --muted-foreground: oklch(0.708 0 0);
-  --accent: oklch(0.269 0 0);
+  --muted: oklch(0.274 0.006 286.033);
+  --muted-foreground: oklch(0.705 0.015 286.067);
+  --accent: oklch(0.274 0.006 286.033);
   --accent-foreground: oklch(0.985 0 0);
   --destructive: oklch(0.704 0.191 22.216);
   --border: oklch(1 0 0 / 10%);
   --input: oklch(1 0 0 / 15%);
-  --ring: oklch(0.556 0 0);
-  --chart-1: oklch(0.488 0.243 264.376);
-  --chart-2: oklch(0.696 0.17 162.48);
-  --chart-3: oklch(0.769 0.188 70.08);
-  --chart-4: oklch(0.627 0.265 303.9);
-  --chart-5: oklch(0.645 0.246 16.439);
-  --sidebar: oklch(0.205 0 0);
+  --ring: oklch(0.41 0.159 10.272);
+  --chart-1: oklch(0.81 0.117 11.638);
+  --chart-2: oklch(0.645 0.246 16.439);
+  --chart-3: oklch(0.586 0.253 17.585);
+  --chart-4: oklch(0.514 0.222 16.935);
+  --chart-5: oklch(0.455 0.188 13.697);
+  --sidebar: oklch(0.21 0.006 285.885);
   --sidebar-foreground: oklch(0.985 0 0);
-  --sidebar-primary: oklch(0.488 0.243 264.376);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.269 0 0);
+  --sidebar-primary: oklch(0.645 0.246 16.439);
+  --sidebar-primary-foreground: oklch(0.969 0.015 12.422);
+  --sidebar-accent: oklch(0.274 0.006 286.033);
   --sidebar-accent-foreground: oklch(0.985 0 0);
   --sidebar-border: oklch(1 0 0 / 10%);
-  --sidebar-ring: oklch(0.556 0 0);
+  --sidebar-ring: oklch(0.41 0.159 10.272);
 }
 
 
@@ -124,6 +123,16 @@
   }
   body {
     @apply bg-background text-foreground;
+  }
+
+  /* Print reset - must be in same layer to properly override */
+  @media print {
+    * {
+      outline: none !important;
+      outline-width: 0 !important;
+      outline-color: transparent !important;
+      border-color: transparent !important;
+    }
   }
 }
 
@@ -141,4 +150,278 @@
 
 .animate-state-fade-in {
   animation: state-fade-in 0.2s ease-out forwards;
+}
+
+/* Grid background pattern */
+.bg-grid {
+  background-image:
+    linear-gradient(to right, oklch(0.85 0 0) 1px, transparent 1px),
+    linear-gradient(to bottom, oklch(0.85 0 0) 1px, transparent 1px);
+  background-size: 40px 40px;
+}
+
+.dark .bg-grid {
+  background-image:
+    linear-gradient(to right, oklch(0.25 0 0) 1px, transparent 1px),
+    linear-gradient(to bottom, oklch(0.25 0 0) 1px, transparent 1px);
+}
+
+/* Print styles */
+@media print {
+  /* Force white background on structural elements */
+  html, body,
+  [data-slot="sidebar-wrapper"],
+  [data-slot="sidebar-inset"] {
+    background: #ffffff !important;
+    background-color: #ffffff !important;
+  }
+
+  /* Override CSS variables for print */
+  :root,
+  .dark {
+    --foreground: #000000 !important;
+    --card-foreground: #000000 !important;
+    --popover-foreground: #000000 !important;
+    --primary-foreground: #000000 !important;
+    --secondary-foreground: #1f2937 !important;
+    --muted-foreground: #374151 !important;
+    --accent-foreground: #1f2937 !important;
+    --background: #ffffff !important;
+    --card: #ffffff !important;
+    --popover: #ffffff !important;
+    --muted: #f0f0f0 !important;
+    --accent: #f5f5f5 !important;
+    --secondary: #f5f5f5 !important;
+    --border: #d1d5db !important;
+    --ring: transparent !important;
+    --sidebar: #ffffff !important;
+    --sidebar-foreground: #000000 !important;
+    --sidebar-background: #ffffff !important;
+    --sidebar-accent: #f5f5f5 !important;
+    --sidebar-border: transparent !important;
+  }
+
+  /* Page setup */
+  @page {
+    margin: 1cm;
+    size: A4;
+  }
+
+  /* Hide navigation and buttons */
+  [data-sidebar],
+  header:has(nav),
+  nav,
+  .sidebar-trigger,
+  button,
+  a[download] {
+    display: none !important;
+  }
+
+  /* Fix flex layout and background */
+  html, body {
+    height: auto !important;
+    min-height: 0 !important;
+  }
+
+  /* Target sidebar wrapper */
+  [data-slot="sidebar-wrapper"] {
+    min-height: 0 !important;
+  }
+
+  .flex-1 {
+    flex: none !important;
+  }
+
+  /* Fix flex containers */
+  .flex {
+    display: block !important;
+  }
+
+  .flex-col {
+    display: block !important;
+  }
+
+  /* Keep inline flex for row items that need side-by-side */
+  .flex.justify-between,
+  .flex.items-center {
+    display: flex !important;
+    flex-wrap: wrap !important;
+  }
+
+  /* Content layout */
+  [data-sidebar-inset],
+  [data-slot="sidebar-inset"],
+  main {
+    margin: 0 !important;
+    padding: 0.5cm !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    min-height: 0 !important;
+    height: auto !important;
+    overflow: visible !important;
+  }
+
+  /* Fix overflow issues */
+  *, *::before, *::after {
+    overflow: visible !important;
+    overflow-x: visible !important;
+    overflow-y: visible !important;
+  }
+
+  /* Allow text to wrap properly */
+  * {
+    word-wrap: break-word !important;
+    overflow-wrap: break-word !important;
+    white-space: normal !important;
+  }
+
+  /* Fix container widths */
+  .container,
+  .max-w-full,
+  .w-full,
+  [class*="max-w-"] {
+    max-width: 100% !important;
+    width: 100% !important;
+  }
+
+  /* Remove overflow hidden from cards */
+  .overflow-hidden {
+    overflow: visible !important;
+  }
+
+  /* White backgrounds for card/content areas */
+  .bg-card,
+  .bg-background,
+  .bg-white {
+    background: #ffffff !important;
+  }
+
+  /* Grey backgrounds for section headers */
+  .bg-muted {
+    background: #f0f0f0 !important;
+  }
+
+  .bg-muted\/50 {
+    background: #f5f5f5 !important;
+  }
+
+  /* Remove borders */
+  .border,
+  .border-border {
+    border: none !important;
+  }
+
+  /* Force desktop table layout for Vehicle Verification in print */
+  .hidden.md\:block {
+    display: block !important;
+  }
+
+  .md\:hidden {
+    display: none !important;
+  }
+
+  /* Table styling */
+  table {
+    width: 100% !important;
+    max-width: 100% !important;
+    border-collapse: collapse;
+    border: 1px solid #d1d5db !important;
+    table-layout: fixed !important;
+  }
+
+  td, th {
+    padding: 6px 8px !important;
+    border: 1px solid #d1d5db !important;
+    background: #ffffff !important;
+    text-align: left !important;
+    word-wrap: break-word !important;
+    overflow-wrap: break-word !important;
+    white-space: normal !important;
+  }
+
+  th {
+    background: #f0f0f0 !important;
+    font-weight: 600 !important;
+  }
+
+  thead {
+    background: #f0f0f0 !important;
+  }
+
+  tbody tr:nth-child(even) td {
+    background: #fafafa !important;
+  }
+
+  /* Badge colors for print - with explicit text colors */
+  .bg-green-100 {
+    background: #dcfce7 !important;
+  }
+  .bg-green-100, .text-green-800 {
+    color: #166534 !important;
+  }
+
+  .bg-yellow-100 {
+    background: #fef9c3 !important;
+  }
+  .bg-yellow-100, .text-yellow-800 {
+    color: #854d0e !important;
+  }
+
+  .bg-orange-100 {
+    background: #fed7aa !important;
+  }
+  .bg-orange-100, .text-orange-800 {
+    color: #9a3412 !important;
+  }
+
+  .bg-red-100 {
+    background: #fecaca !important;
+  }
+  .bg-red-100, .text-red-800 {
+    color: #991b1b !important;
+  }
+
+  /* Ensure print color adjustment and remove outlines */
+  *,
+  *::before,
+  *::after {
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+    outline: none !important;
+    outline-width: 0 !important;
+    outline-style: none !important;
+    outline-color: transparent !important;
+    box-shadow: none !important;
+  }
+
+  /* Reset borders/outlines on main containers */
+  html,
+  body,
+  main,
+  [data-slot="sidebar-inset"],
+  .bg-card,
+  .rounded-lg,
+  .rounded-xl,
+  .shadow-sm,
+  .shadow-md,
+  .shadow {
+    border: none !important;
+    outline: none !important;
+    box-shadow: none !important;
+    border-radius: 0 !important;
+  }
+
+  /* Remove any visual border/shadow effects */
+  [class*="shadow"],
+  [class*="ring-"],
+  [class*="outline-"] {
+    box-shadow: none !important;
+    outline: none !important;
+  }
+
+  /* Page break control */
+  tr, .divide-y > div {
+    page-break-inside: avoid;
+    break-inside: avoid;
+  }
 }

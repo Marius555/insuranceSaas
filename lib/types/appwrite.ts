@@ -134,7 +134,7 @@ export interface ClaimDamageDetailDocument extends Models.Document {
   part_name: string;
   severity: 'minor' | 'moderate' | 'severe'; // Database enum constraint (schema/database.schema.json:352)
   description: string;
-  estimated_repair_cost?: number;
+  estimated_repair_cost?: string; // e.g., "$500 - $800"
   sort_order: number;
 }
 
@@ -202,7 +202,6 @@ export interface AuditLogDocument extends Models.Document {
  * Helper functions for fetching full claim data with related collections
  */
 
-import type { Databases } from 'node-appwrite';
 import { Query } from 'node-appwrite';
 
 /**

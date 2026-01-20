@@ -1,5 +1,5 @@
 {
-  "version": "3.0.0",
+  "version": "3.1.0",
   "description": "Car Insurance Damage Assessment Platform - Database Schema",
   "database": {
     "id": "${DATABASE_ID}",
@@ -360,15 +360,40 @@
         },
         {
           "key": "estimated_repair_cost",
-          "type": "float",
-          "required": false,
-          "min": 0
+          "type": "string",
+          "size": 50,
+          "required": false
         },
         {
           "key": "sort_order",
           "type": "integer",
           "required": true,
           "min": 0
+        },
+        {
+          "key": "damage_age",
+          "type": "enum",
+          "elements": ["fresh", "days_old", "weeks_old", "months_old", "unknown"],
+          "required": false
+        },
+        {
+          "key": "age_indicators",
+          "type": "string",
+          "size": 200,
+          "required": false,
+          "array": true
+        },
+        {
+          "key": "rust_present",
+          "type": "boolean",
+          "required": false,
+          "default": false
+        },
+        {
+          "key": "pre_existing",
+          "type": "boolean",
+          "required": false,
+          "default": false
         }
       ],
       "indexes": [
@@ -381,6 +406,16 @@
           "key": "severity_index",
           "type": "key",
           "attributes": ["severity"]
+        },
+        {
+          "key": "damage_age_index",
+          "type": "key",
+          "attributes": ["damage_age"]
+        },
+        {
+          "key": "pre_existing_index",
+          "type": "key",
+          "attributes": ["pre_existing"]
         }
       ]
     },
@@ -648,6 +683,109 @@
           "key": "assessment_status_index",
           "type": "key",
           "attributes": ["assessment_status"]
+        }
+      ]
+    },
+    {
+      "id": "claim_fraud_assessments",
+      "name": "claim_fraud_assessments",
+      "documentSecurity": true,
+      "permissions": [],
+      "attributes": [
+        {
+          "key": "claim_id",
+          "type": "string",
+          "size": 36,
+          "required": true
+        },
+        {
+          "key": "damage_age_estimated",
+          "type": "enum",
+          "elements": ["fresh", "days_old", "weeks_old", "months_old", "unknown"],
+          "required": false
+        },
+        {
+          "key": "damage_age_confidence",
+          "type": "float",
+          "required": false,
+          "min": 0,
+          "max": 1
+        },
+        {
+          "key": "damage_age_data_json",
+          "type": "string",
+          "size": 4000,
+          "required": false
+        },
+        {
+          "key": "contamination_detected",
+          "type": "boolean",
+          "required": false,
+          "default": false
+        },
+        {
+          "key": "contamination_data_json",
+          "type": "string",
+          "size": 3000,
+          "required": false
+        },
+        {
+          "key": "rust_detected",
+          "type": "boolean",
+          "required": false,
+          "default": false
+        },
+        {
+          "key": "rust_fraud_indicator",
+          "type": "boolean",
+          "required": false,
+          "default": false
+        },
+        {
+          "key": "rust_data_json",
+          "type": "string",
+          "size": 4000,
+          "required": false
+        },
+        {
+          "key": "pre_existing_detected",
+          "type": "boolean",
+          "required": false,
+          "default": false
+        },
+        {
+          "key": "pre_existing_risk_level",
+          "type": "enum",
+          "elements": ["low", "medium", "high"],
+          "required": false
+        },
+        {
+          "key": "pre_existing_data_json",
+          "type": "string",
+          "size": 4000,
+          "required": false
+        }
+      ],
+      "indexes": [
+        {
+          "key": "claim_id_unique",
+          "type": "unique",
+          "attributes": ["claim_id"]
+        },
+        {
+          "key": "rust_fraud_indicator_index",
+          "type": "key",
+          "attributes": ["rust_fraud_indicator"]
+        },
+        {
+          "key": "pre_existing_detected_index",
+          "type": "key",
+          "attributes": ["pre_existing_detected"]
+        },
+        {
+          "key": "damage_age_index",
+          "type": "key",
+          "attributes": ["damage_age_estimated"]
         }
       ]
     },

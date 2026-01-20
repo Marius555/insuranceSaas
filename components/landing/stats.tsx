@@ -8,7 +8,6 @@ const stats = [
 ];
 
 const trustBadges = [
-  "Powered by Gemini 2.5 Flash",
   "Enterprise Security",
   "Audit Logged",
 ];

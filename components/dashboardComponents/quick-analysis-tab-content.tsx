@@ -4,7 +4,7 @@ import { useState } from "react";
 import { FileUploadZone } from "@/components/gemini-analysis/file-upload-zone";
 import { MediaPreview } from "@/components/gemini-analysis/media-preview";
 import { ProgressIndicator } from "@/components/gemini-analysis/progress-indicator";
-import { submitClaimAction } from "@/app/claim-analysis/actions";
+import { submitClaimAction } from "@/appwrite/submitClaimAction";
 import { Button } from "@/components/ui/button";
 
 interface QuickAnalysisTabContentProps {
@@ -72,9 +72,8 @@ export function QuickAnalysisTabContent({ onSuccess }: QuickAnalysisTabContentPr
       if (result.success && result.claimId) {
         setCurrentStep(6);
         setSuccess(true);
-        setTimeout(() => {
-          onSuccess(result.claimId!);
-        }, 1500);
+        // Call immediately - no delay, let modal stay open during navigation
+        onSuccess(result.claimId!);
       } else {
         setError(result.message || "Analysis failed. Please try again.");
         setIsAnalyzing(false);
@@ -141,7 +140,7 @@ export function QuickAnalysisTabContent({ onSuccess }: QuickAnalysisTabContentPr
             ✓ Claim Submitted Successfully!
           </div>
           <p className="text-muted-foreground">
-            Your claim has been submitted and is being processed.
+            Redirecting to your claim...
           </p>
         </div>
       )}

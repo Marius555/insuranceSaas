@@ -173,7 +173,7 @@ export default async function InsuranceClaimsPage() {
                     )}
                   </div>
                   <div className="flex gap-2">
-                    <Link href={`/claims/${claim.$id}`}>
+                    <Link href={`/auth/claims/${claim.$id}`}>
                       <Button>Review Claim</Button>
                     </Link>
                   </div>

@@ -81,15 +81,10 @@ function StepCard({
   const Icon = step.icon;
 
   return (
-    <div className="relative flex flex-col items-center text-center group">
-      {/* Number Circle */}
-      <div className="flex items-center justify-center size-16 rounded-full bg-primary/10 text-primary font-bold text-xl mb-4 ring-4 ring-primary/5 group-hover:ring-primary/20 transition-all">
-        {step.number}
-      </div>
-
-      {/* Icon */}
-      <div className="inline-flex items-center justify-center size-12 rounded-lg bg-background border border-border mb-3">
-        <HugeiconsIcon icon={Icon} className="size-6 text-primary" strokeWidth={2} />
+    <div className="relative flex flex-col items-center text-center">
+      {/* Icon Circle */}
+      <div className="flex items-center justify-center size-16 rounded-full bg-primary/10 text-primary mb-4 ring-4 ring-primary/5">
+        <HugeiconsIcon icon={Icon} className="size-7 text-primary" strokeWidth={2} />
       </div>
 
       {/* Content */}

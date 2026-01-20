@@ -29,7 +29,7 @@ export function getGeminiClient(): GoogleGenAI {
  */
 export function getModel(modelName: string = GEMINI_MODELS.FLASH_LITE) {
   const client = getGeminiClient();
-  return client.models.get(modelName);
+  return client.models.get({ model: modelName });
 }
 
 /**

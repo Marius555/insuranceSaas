@@ -9,14 +9,18 @@ import { Label } from "@/components/ui/label";
 import { completeOnboarding } from "@/app/api/auth/onboarding/actions";
 import { registerCompany } from "@/app/api/company/register/actions";
 import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert";
+import { HugeiconsIcon } from "@hugeicons/react";
+import { UserCircleIcon, Briefcase01Icon, Building06Icon, Copy01Icon } from "@hugeicons/core-free-icons";
+import type { OnboardingFlow } from "@/lib/utils/auth-redirect-storage";
 
 interface OnboardingModalProps {
   userId: string;
   email: string;
   name: string;
+  flowType?: OnboardingFlow | null;
 }
 
-export function OnboardingModal({ userId, email, name }: OnboardingModalProps) {
+export function OnboardingModal({ userId, email, name, flowType }: OnboardingModalProps) {
   const router = useRouter();
   const [step, setStep] = useState<'select-type' | 'insurance-details' | 'company-registration' | 'registration-success'>('select-type');
   const [userType, setUserType] = useState<'user' | 'insurance_adjuster' | null>(null);
@@ -146,49 +150,83 @@ export function OnboardingModal({ userId, email, name }: OnboardingModalProps) {
               <DialogTitle>Welcome! Let&apos;s get you set up</DialogTitle>
             </DialogHeader>
             <div className="space-y-4 py-4">
-              <p className="text-sm text-gray-600">
-                Are you a regular user checking vehicle damage, or an insurance company employee reviewing claims?
+              <p className="text-sm text-muted-foreground">
+                {flowType === 'user'
+                  ? 'You can check vehicle damage and get repair cost estimates.'
+                  : flowType === 'insurance'
+                  ? 'Select how you want to use VehicleClaim for your insurance work.'
+                  : 'Are you a regular user checking vehicle damage, or an insurance company employee reviewing claims?'}
               </p>
 
               <div className="grid grid-cols-1 gap-3">
-                <Button
-                  variant="outline"
-                  className="h-auto py-4 flex-col items-start text-left"
-                  onClick={() => handleUserTypeSelect('user')}
-                  disabled={isSubmitting}
-                >
-                  <div className="font-semibold">Regular User</div>
-                  <div className="text-xs text-gray-600 mt-1">
-                    I want to check damage and estimate repair costs
-                  </div>
-                </Button>
+                {/* Regular User Option - shown for 'user' flow or no flow */}
+                {(flowType === 'user' || !flowType) && (
+                  <Button
+                    variant="outline"
+                    className="h-auto py-4 px-4 justify-start focus:ring-2 focus:ring-primary focus:ring-offset-2"
+                    onClick={() => handleUserTypeSelect('user')}
+                    disabled={isSubmitting}
+                  >
+                    <div className="flex items-start gap-3 w-full">
+                      <div className="mt-0.5">
+                        <HugeiconsIcon icon={UserCircleIcon} className="h-5 w-5 text-primary" />
+                      </div>
+                      <div className="flex-1 text-left">
+                        <div className="font-semibold">Regular User</div>
+                        <div className="text-xs text-muted-foreground mt-1">
+                          I want to check damage and estimate repair costs
+                        </div>
+                      </div>
+                    </div>
+                  </Button>
+                )}
 
-                <Button
-                  variant="outline"
-                  className="h-auto py-4 flex-col items-start text-left"
-                  onClick={() => handleUserTypeSelect('insurance_adjuster')}
-                  disabled={isSubmitting}
-                >
-                  <div className="font-semibold">Insurance Company Employee</div>
-                  <div className="text-xs text-gray-600 mt-1">
-                    I review and process claims for my company
-                  </div>
-                </Button>
+                {/* Insurance Employee Option - shown for 'insurance' flow or no flow */}
+                {(flowType === 'insurance' || !flowType) && (
+                  <Button
+                    variant="outline"
+                    className="h-auto py-4 px-4 justify-start focus:ring-2 focus:ring-primary focus:ring-offset-2"
+                    onClick={() => handleUserTypeSelect('insurance_adjuster')}
+                    disabled={isSubmitting}
+                  >
+                    <div className="flex items-start gap-3 w-full">
+                      <div className="mt-0.5">
+                        <HugeiconsIcon icon={Briefcase01Icon} className="h-5 w-5 text-primary" />
+                      </div>
+                      <div className="flex-1 text-left">
+                        <div className="font-semibold">Insurance Company Employee</div>
+                        <div className="text-xs text-muted-foreground mt-1">
+                          I review and process claims for my company
+                        </div>
+                      </div>
+                    </div>
+                  </Button>
+                )}
 
-                <Button
-                  variant="outline"
-                  className="h-auto py-4 flex-col items-start text-left border-blue-200 hover:border-blue-300 hover:bg-blue-50"
-                  onClick={() => {
-                    setUserType(null);
-                    setStep('company-registration');
-                  }}
-                  disabled={isSubmitting}
-                >
-                  <div className="font-semibold text-blue-700">Register as a Company</div>
-                  <div className="text-xs text-blue-600 mt-1">
-                    Set up your insurance company and get a code for your team
-                  </div>
-                </Button>
+                {/* Register Company Option - shown for 'insurance' flow or no flow */}
+                {(flowType === 'insurance' || !flowType) && (
+                  <Button
+                    variant="outline"
+                    className="h-auto py-4 px-4 justify-start focus:ring-2 focus:ring-primary focus:ring-offset-2"
+                    onClick={() => {
+                      setUserType(null);
+                      setStep('company-registration');
+                    }}
+                    disabled={isSubmitting}
+                  >
+                    <div className="flex items-start gap-3 w-full">
+                      <div className="mt-0.5">
+                        <HugeiconsIcon icon={Building06Icon} className="h-5 w-5 text-primary" />
+                      </div>
+                      <div className="flex-1 text-left">
+                        <div className="font-semibold">Register as a Company</div>
+                        <div className="text-xs text-muted-foreground mt-1">
+                          Set up your insurance company and get a code for your team
+                        </div>
+                      </div>
+                    </div>
+                  </Button>
+                )}
               </div>
             </div>
           </>
@@ -209,16 +247,16 @@ export function OnboardingModal({ userId, email, name }: OnboardingModalProps) {
                   onChange={(e) => setCompanyCode(e.target.value.toUpperCase())}
                   disabled={isSubmitting}
                 />
-                <p className="text-xs text-gray-600 mt-1">
+                <p className="text-xs text-muted-foreground mt-1">
                   Enter the code provided by your insurance company. Don&apos;t have one?{' '}
-                  <a href="/company-register" className="text-blue-600 hover:underline">
+                  <a href="/company-register" className="text-primary hover:underline">
                     Register your company
                   </a>
                 </p>
               </div>
 
               {error && (
-                <div className="text-sm text-red-600 bg-red-50 p-3 rounded-md">
+                <div className="text-sm text-destructive bg-destructive/10 p-3 rounded-md">
                   {error}
                 </div>
               )}
@@ -252,7 +290,7 @@ export function OnboardingModal({ userId, email, name }: OnboardingModalProps) {
               <DialogTitle>Register Your Insurance Company</DialogTitle>
             </DialogHeader>
             <div className="space-y-4 py-4">
-              <p className="text-sm text-gray-600">
+              <p className="text-sm text-muted-foreground">
                 Fill out the details below to create your company profile and receive a unique code.
               </p>
 
@@ -281,7 +319,7 @@ export function OnboardingModal({ userId, email, name }: OnboardingModalProps) {
                   disabled={isSubmitting}
                   required
                 />
-                <p className="text-xs text-gray-500">
+                <p className="text-xs text-muted-foreground">
                   Your company code will be sent to this email
                 </p>
               </div>
@@ -350,37 +388,36 @@ export function OnboardingModal({ userId, email, name }: OnboardingModalProps) {
             </DialogHeader>
             <div className="space-y-4 py-4">
               {/* Success Message */}
-              <Alert className="bg-green-50 border-green-200">
-                <AlertTitle className="text-green-800">Registration Complete</AlertTitle>
-                <AlertDescription className="text-green-700">
+              <Alert className="bg-background">
+                <AlertTitle>Registration Complete</AlertTitle>
+                <AlertDescription>
                   Your insurance company has been registered. Share the code below with your employees.
                 </AlertDescription>
               </Alert>
 
               {/* Company Code Display */}
-              <div className="p-4 bg-gradient-to-br from-blue-50 to-indigo-50 rounded-lg border-2 border-blue-200">
-                <p className="text-sm font-medium text-gray-700 mb-2">Your Company Code:</p>
+              <div className="p-4 bg-background rounded-lg border">
+                <p className="text-sm font-medium text-muted-foreground mb-2">Your Company Code:</p>
                 <div className="flex items-center justify-between gap-3">
-                  <p className="text-3xl font-bold text-blue-900 font-mono tracking-wider">
+                  <p className="text-3xl font-bold text-primary font-mono tracking-wider">
                     {generatedCompanyCode}
                   </p>
                   <Button
                     variant="outline"
-                    size="sm"
+                    size="icon"
                     onClick={() => {
                       navigator.clipboard.writeText(generatedCompanyCode);
                     }}
-                    className="shrink-0"
                   >
-                    Copy
+                    <HugeiconsIcon icon={Copy01Icon} className="h-4 w-4" />
                   </Button>
                 </div>
               </div>
 
               {/* Instructions */}
-              <div className="bg-gray-50 p-4 rounded-md text-sm">
-                <p className="font-medium text-gray-900 mb-2">What&apos;s Next?</p>
-                <ol className="list-decimal list-inside space-y-1.5 text-gray-700">
+              <div className="bg-background p-4 rounded-md border text-sm">
+                <p className="font-medium text-foreground mb-2">What&apos;s Next?</p>
+                <ol className="list-decimal list-inside space-y-1.5 text-muted-foreground">
                   <li>Share this code with your employees</li>
                   <li>Employees sign up and select &quot;Insurance Company Employee&quot;</li>
                   <li>They enter this code during onboarding</li>
@@ -389,7 +426,7 @@ export function OnboardingModal({ userId, email, name }: OnboardingModalProps) {
               </div>
 
               {/* Email Confirmation */}
-              <p className="text-xs text-gray-600 text-center">
+              <p className="text-xs text-muted-foreground text-center">
                 This code has also been sent to {companyFormData.contact_email}
               </p>
 

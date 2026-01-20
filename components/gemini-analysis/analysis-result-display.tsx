@@ -514,7 +514,7 @@ export function AnalysisResultDisplay({
       {/* Action Buttons */}
       <div className="flex gap-3 pt-2">
         <Button
-          onClick={() => router.push(`/claims/${claimId}`)}
+          onClick={() => router.push(`/auth/claims/${claimId}`)}
           className="flex-1"
           size="lg"
         >

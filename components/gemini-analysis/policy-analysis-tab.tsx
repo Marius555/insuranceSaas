@@ -8,7 +8,7 @@ import { ProgressIndicator } from "./progress-indicator";
 import { AnalysisResultDisplay } from "./analysis-result-display";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { submitClaimAction } from "@/app/claim-analysis/actions";
+import { submitClaimAction } from "@/appwrite/submitClaimAction";
 import type { EnhancedAutoDamageAnalysis } from "@/lib/gemini/types";
 
 export function PolicyAnalysisTab() {
@@ -127,7 +127,7 @@ export function PolicyAnalysisTab() {
       setCurrentStep(6);
 
       // Store results
-      setResult(result.analysis!);
+      setResult(result.analysis as EnhancedAutoDamageAnalysis);
       setClaimId(result.claimId!);
       setClaimNumber(result.claimNumber!);
 

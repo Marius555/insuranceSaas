@@ -5,8 +5,8 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import { HugeiconsIcon } from "@hugeicons/react";
-import { Video02Icon, Image02Icon } from "@hugeicons/core-free-icons";
-
+import { Video02Icon, Image02Icon, Delete02Icon } from "@hugeicons/core-free-icons";
+import Image from "next/image";
 interface MediaPreviewProps {
   files: File[];
   onRemove: (index: number) => void;
@@ -60,7 +60,7 @@ export function MediaPreview({
         }
       });
     };
-  }, [files, mediaType]);
+  }, [files, mediaType, previews]);
 
   const formatFileSize = (bytes: number): string => {
     if (bytes < 1024) return bytes + ' B';
@@ -105,7 +105,7 @@ export function MediaPreview({
                 size="sm"
                 onClick={() => onRemove(index)}
               >
-                Remove
+                <HugeiconsIcon icon={Delete02Icon} color="red"/>
               </Button>
             </div>
           </div>
@@ -118,7 +118,7 @@ export function MediaPreview({
   return (
     <div className="space-y-3">
       <div className={cn(
-        "grid gap-4 max-h-[400px] overflow-y-auto",
+        "grid gap-4 max-h-100 overflow-y-auto",
         files.length === 1 && "grid-cols-1",
         files.length === 2 && "grid-cols-2",
         files.length >= 3 && "grid-cols-2 sm:grid-cols-3"
@@ -130,8 +130,9 @@ export function MediaPreview({
           >
             {/* Preview Image/Video */}
             {mediaType === 'image' && previews[index] && (
-              <div className="aspect-square overflow-hidden bg-muted max-h-[150px]">
-                <img
+              <div className="aspect-square overflow-hidden bg-muted max-h-37.5">
+                <Image
+                  fill
                   src={previews[index]}
                   alt={`Preview ${index + 1}`}
                   className="w-full h-full object-cover"
@@ -140,7 +141,7 @@ export function MediaPreview({
             )}
 
             {mediaType === 'video' && (
-              <div className="aspect-square flex items-center justify-center bg-muted max-h-[150px]">
+              <div className="aspect-square flex items-center justify-center bg-muted max-h-37.5">
                 <div className="text-center p-4">
                   <svg
                     className="mx-auto h-12 w-12 text-muted-foreground"

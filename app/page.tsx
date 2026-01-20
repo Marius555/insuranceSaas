@@ -6,9 +6,9 @@ import { HeroWithUpload } from "@/components/landing/hero-with-upload";
 import { Features } from "@/components/landing/features";
 import { HowItWorks } from "@/components/landing/how-it-works";
 import { Stats } from "@/components/landing/stats";
-import { CTASection } from "@/components/landing/cta-section";
 import { Footer } from "@/components/landing/footer";
 import { OnboardingWrapper } from "@/components/auth/onboarding-wrapper";
+
 
 // CRITICAL: Force dynamic rendering to prevent caching
 export const dynamic = 'force-dynamic';
@@ -49,7 +49,6 @@ export default async function LandingPage() {
         <Features />
         <HowItWorks />
         <Stats />
-        <CTASection />
       </main>
       <Footer />
     </>

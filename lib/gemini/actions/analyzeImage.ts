@@ -82,6 +82,14 @@ You MUST produce identical outputs for identical inputs. Follow these rules:
 5. Be deterministic in your reasoning process
 `;
 
+    // Sort images for consistent ordering
+    const sortedImages = [...images].sort((a, b) => {
+      // Sort by angle if available, otherwise maintain original order
+      const angleA = a.angle || '';
+      const angleB = b.angle || '';
+      return angleA.localeCompare(angleB);
+    });
+
     const anglesInfo = sortedImages
       .map((img, idx) => img.angle || `Image ${idx + 1}`)
       .join(', ');
@@ -94,36 +102,100 @@ Images provided: ${anglesInfo}
 
 IMPORTANT: Consider all ${images.length} image(s) together to form a comprehensive assessment. Different angles may show different aspects of the damage.
 
+### DAMAGE AGE ANALYSIS (CRITICAL FOR FRAUD DETECTION)
+For each damaged area, assess whether the damage appears FRESH or OLD:
+
+**Fresh Damage Indicators (0-48 hours):**
+- Exposed metal is shiny, silver, or bright
+- Clean break edges without discoloration
+- No rust or oxidation on exposed surfaces
+- Fresh paint chips with clean edges
+- No dirt/debris accumulation in damage area
+
+**Old Damage Indicators (days to weeks):**
+- Exposed metal shows orange-brown oxidation
+- Rust spots forming at damage edges
+- Dirt/grime accumulated in scratches/dents
+- Paint edges show weathering/chalking
+- Water staining patterns visible
+
+**Very Old Damage (weeks to months):**
+- Deep rust with pitting
+- Dark brown or black oxidation
+- Heavy contamination in damaged areas
+- Multiple layers of rust/paint deterioration
+- Structural corrosion visible
+
+### SURFACE CONTAMINATION CHECK
+Identify any substances covering or near the damage:
+- Dirt, mud, road grime
+- Snow, ice, salt residue
+- Water stains, mineral deposits
+- Oil, grease, chemical stains
+- Dust accumulation patterns
+
+Note: Contamination covering fresh damage is suspicious (may indicate damage is older than claimed).
+
+### RUST/CORROSION ASSESSMENT
+For ALL metal surfaces visible, note:
+- Location of any rust/corrosion
+- Color (bright orange = new, dark brown = old)
+- Spread pattern (localized vs spreading)
+- Depth (surface rust vs pitting vs structural)
+
 Return a JSON object with the following structure:
 {
   "damagedParts": [
     {
       "part": "front bumper",
       "severity": "moderate",
-      "description": "Cracked plastic with paint damage visible in front-view image"
+      "description": "Cracked plastic with paint damage visible in front-view image",
+      "damageAge": "fresh",
+      "ageIndicators": ["Shiny exposed metal", "No oxidation visible"],
+      "rustPresent": false,
+      "preExisting": false
     }
   ],
   "overallSeverity": "moderate",
   "estimatedRepairComplexity": "moderate",
   "safetyConcerns": ["Headlight damaged - affects visibility"],
   "recommendedActions": ["Replace front bumper", "Repair headlight assembly"],
-  "confidence": 0.85
+  "confidence": 0.85,
+  "damageAgeAssessment": {
+    "estimatedAge": "fresh",
+    "confidenceScore": 0.85,
+    "indicators": [
+      {
+        "type": "oxidation",
+        "observation": "Exposed metal on bumper is shiny silver",
+        "ageImplication": "Damage occurred within 24-48 hours"
+      }
+    ],
+    "reasoning": "No rust or oxidation visible on exposed metal. Paint edges are clean and sharp."
+  },
+  "contaminationAssessment": {
+    "contaminationDetected": false,
+    "contaminants": [],
+    "fraudRiskLevel": "low",
+    "notes": "Damage area is clean, consistent with recent incident"
+  },
+  "rustCorrosionAssessment": {
+    "rustDetected": false,
+    "corrosionAreas": [],
+    "overallCorrosionLevel": "none",
+    "estimatedCorrosionAge": "N/A",
+    "fraudIndicator": false,
+    "notes": "No rust detected in damage areas"
+  }
 }
 
 Categories:
 - severity: "minor" | "moderate" | "severe" | "total_loss"
 - repairComplexity: "simple" | "moderate" | "complex" | "extensive"
+- damageAge: "fresh" | "days_old" | "weeks_old" | "months_old" | "unknown"
 - confidence: 0.0 to 1.0
 
 Provide thorough analysis based on visible damage across all ${images.length} image(s). If multiple angles show the same damage, mention it once but note it's visible from multiple perspectives.`;
-
-    // Sort images for consistent ordering
-    const sortedImages = [...images].sort((a, b) => {
-      // Sort by angle if available, otherwise maintain original order
-      const angleA = a.angle || '';
-      const angleB = b.angle || '';
-      return angleA.localeCompare(angleB);
-    });
 
     // Build content parts with all images
     const contentParts = [

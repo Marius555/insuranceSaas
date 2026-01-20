@@ -20,7 +20,7 @@ import {
   compressVideoIfNeeded,
   needsCompression,
 } from "@/lib/utils/video-compression";
-import { submitClaimAction } from "@/app/claim-analysis/actions";
+import { submitClaimAction } from "@/appwrite/submitClaimAction";
 import { Camera02Icon, CameraOff02Icon } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
 
@@ -202,7 +202,7 @@ export function VideoRecorderModal({
 
         onSuccess?.(result.claimId);
         handleOpenChange(false);
-        router.push(`/claims/${result.claimId}`);
+        router.push(`/auth/claims/${result.claimId}`);
       } else {
         setError(result.message || "Failed to submit claim");
         setModalState("preview");
@@ -246,7 +246,7 @@ export function VideoRecorderModal({
 
         onSuccess?.(result.claimId);
         handleOpenChange(false);
-        router.push(`/claims/${result.claimId}`);
+        router.push(`/auth/claims/${result.claimId}`);
       } else {
         setError(result.message || "Failed to submit claim");
         setModalState("policy-step");

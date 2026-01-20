@@ -49,7 +49,7 @@ export function ClaimsTable({ claims }: ClaimsTableProps) {
           <div
             key={claim.$id}
             className="p-4 cursor-pointer hover:bg-muted/50 active:bg-muted"
-            onClick={() => router.push(`/claims/${claim.$id}`)}
+            onClick={() => router.push(`/auth/claims/${claim.$id}`)}
           >
             <div className="flex items-center justify-between gap-2 mb-2">
               <span className="font-medium text-sm truncate">
@@ -98,7 +98,7 @@ export function ClaimsTable({ claims }: ClaimsTableProps) {
               <TableRow
                 key={claim.$id}
                 className="cursor-pointer hover:bg-muted/50"
-                onClick={() => router.push(`/claims/${claim.$id}`)}
+                onClick={() => router.push(`/auth/claims/${claim.$id}`)}
               >
                 <TableCell className="font-medium">
                   {claim.claim_number}
@@ -131,7 +131,7 @@ export function ClaimsTable({ claims }: ClaimsTableProps) {
                     size="sm"
                     onClick={(e) => {
                       e.stopPropagation();
-                      router.push(`/claims/${claim.$id}`);
+                      router.push(`/auth/claims/${claim.$id}`);
                     }}
                   >
                     View

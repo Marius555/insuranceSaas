@@ -3,6 +3,7 @@ import { config } from 'dotenv';
 config();
 
 import { adminAction } from '../appwrite/adminOrClient';
+import { IndexType } from 'node-appwrite';
 import type { Databases } from 'node-appwrite';
 import * as fs from 'fs/promises';
 import * as path from 'path';
@@ -384,7 +385,7 @@ async function applySchemaDiff(
           databaseId,
           collection.id,
           idx.key,
-          idx.type,
+          idx.type as IndexType,
           idx.attributes,
           idx.orders ?? []
         );
@@ -419,7 +420,7 @@ async function applySchemaDiff(
           databaseId,
           collectionId,
           idx.key,
-          idx.type,
+          idx.type as IndexType,
           idx.attributes,
           idx.orders ?? []
         );

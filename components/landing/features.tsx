@@ -62,10 +62,10 @@ export function Features() {
         {features.map((feature, index) => (
           <Card
             key={index}
-            className="hover:shadow-lg transition-shadow group cursor-default"
+            className="cursor-default"
           >
             <CardHeader className="space-y-4">
-              <div className="inline-flex items-center justify-center size-12 rounded-lg bg-primary/10 text-primary group-hover:bg-primary group-hover:text-primary-foreground transition-colors">
+              <div className="inline-flex items-center justify-center size-12 rounded-lg bg-primary/10 text-primary">
                 <HugeiconsIcon icon={feature.icon} className="size-6" strokeWidth={2} />
               </div>
               <CardTitle className="text-lg">{feature.title}</CardTitle>

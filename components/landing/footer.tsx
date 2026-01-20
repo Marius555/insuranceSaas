@@ -38,6 +38,9 @@ export function Footer() {
               AI-powered vehicle damage assessment for insurance companies and car
               owners
             </p>
+            <p className="text-sm text-muted-foreground mt-2">
+              © 2026 VehicleClaim AI. All rights reserved.
+            </p>
           </div>
 
           {/* Product Column */}
@@ -90,13 +93,6 @@ export function Footer() {
               ))}
             </ul>
           </div>
-        </div>
-
-        {/* Bottom Bar */}
-        <div className="border-t border-border pt-8">
-          <p className="text-center text-sm text-muted-foreground">
-            © 2026 VehicleClaim AI. All rights reserved.
-          </p>
         </div>
       </div>
     </footer>

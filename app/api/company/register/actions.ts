@@ -66,8 +66,8 @@ export async function registerCompany(data: CompanyRegistrationData) {
         company_code: companyCode,
         team_id: teamResult.teamId,
         contact_email: data.contact_email,
-        contact_phone: data.contact_phone || null,
-        website: data.website || null,
+        contact_phone: data.contact_phone ?? undefined,
+        website: data.website ?? undefined,
         is_active: true,
       },
       permissions

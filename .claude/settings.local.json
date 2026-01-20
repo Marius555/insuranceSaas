@@ -11,7 +11,12 @@
       "Bash(npx tsc:*)",
       "Bash(timeout:*)",
       "Bash(npx localtunnel:*)",
-      "Bash(ping:*)"
+      "Bash(ping:*)",
+      "mcp__ide__getDiagnostics",
+      "Bash(cd:*)",
+      "Bash(npm install:*)",
+      "Bash(npm ls:*)",
+      "Bash(npm search:*)"
     ]
   }
 }

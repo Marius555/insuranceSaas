@@ -35,7 +35,7 @@ export async function extractPDFText(pdfBase64: string): Promise<string> {
       },
     });
 
-    return response.text.trim();
+    return (response.text ?? '').trim();
   } catch (error: unknown) {
     console.error("❌ PDF text extraction error:", error);
     // Return empty string on error - security scanning will skip

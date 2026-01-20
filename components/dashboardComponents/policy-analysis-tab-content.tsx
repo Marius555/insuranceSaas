@@ -4,11 +4,13 @@ import { useState } from "react";
 import { FileUploadZone } from "@/components/gemini-analysis/file-upload-zone";
 import { MediaPreview } from "@/components/gemini-analysis/media-preview";
 import { ProgressIndicator } from "@/components/gemini-analysis/progress-indicator";
-import { submitClaimAction } from "@/app/claim-analysis/actions";
+import { submitClaimAction } from "@/appwrite/submitClaimAction";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { HugeiconsIcon } from "@hugeicons/react";
+import { HugeiconsIcon,  } from "@hugeicons/react";
 import { Pdf02Icon } from "@hugeicons/core-free-icons";
+import { Delete02Icon } from "@hugeicons/core-free-icons";
+
 
 interface PolicyAnalysisTabContentProps {
   onSuccess: (claimId: string) => void;
@@ -77,9 +79,8 @@ export function PolicyAnalysisTabContent({ onSuccess }: PolicyAnalysisTabContent
       if (result.success && result.claimId) {
         setCurrentStep(6);
         setSuccess(true);
-        setTimeout(() => {
-          onSuccess(result.claimId!);
-        }, 1500);
+        // Call immediately - no delay, let modal stay open during navigation
+        onSuccess(result.claimId!);
       } else {
         setError(result.message || "Analysis failed. Please try again.");
         setIsAnalyzing(false);
@@ -151,10 +152,10 @@ export function PolicyAnalysisTabContent({ onSuccess }: PolicyAnalysisTabContent
                   </div>
                   <Button
                     variant="ghost"
-                    size="sm"
+                    size="sm" className="rounded-full "
                     onClick={() => setPolicyFile(null)}
                   >
-                    Remove
+                    <HugeiconsIcon icon={Delete02Icon} color="red"  />
                   </Button>
                 </div>
               </div>
@@ -185,7 +186,7 @@ export function PolicyAnalysisTabContent({ onSuccess }: PolicyAnalysisTabContent
             ✓ Claim Submitted Successfully!
           </div>
           <p className="text-muted-foreground">
-            Your enhanced claim analysis has been submitted and is being processed.
+            Redirecting to your claim...
           </p>
         </div>
       )}

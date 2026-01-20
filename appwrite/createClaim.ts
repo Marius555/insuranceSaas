@@ -543,7 +543,7 @@ export async function createClaimFromAnalysis(
         investigation_needed: analysisData.investigationNeeded,
         investigation_reason: analysisData.investigationReason
           ? toValidString(analysisData.investigationReason, 500, 'investigation_reason')
-          : null,
+          : undefined,
         safety_concerns: toValidStringArray(analysisData.safetyConcerns, 1200, 'safety_concerns'),
         recommended_actions: toValidStringArray(analysisData.recommendedActions, 1200, 'recommended_actions'),
         media_file_ids: mediaFileIds,
@@ -581,7 +581,13 @@ export async function createClaimFromAnalysis(
           part_name: part.part,
           severity: normalizedSeverity,
           description: part.description,
+          estimated_repair_cost: part.estimatedRepairCost || null,
           sort_order: index,
+          // Fraud detection fields
+          damage_age: part.damageAge || null,
+          age_indicators: toValidStringArray(part.ageIndicators, 200, 'age_indicators'),
+          rust_present: part.rustPresent ?? false,
+          pre_existing: part.preExisting ?? false,
         },
         getClaimRelatedPermissions(userId, teamId)
       );
@@ -674,11 +680,70 @@ export async function createClaimFromAnalysis(
       estimated_payout: analysisData.claimAssessment.financialBreakdown.estimatedPayout ?? 0,
     });
 
-    // 6. Wait for all related documents to be created
+    // 6. Create fraud assessment document
+    const fraudAssessmentPromise = databases.createDocument(
+      DATABASE_ID,
+      COLLECTION_IDS.CLAIM_FRAUD_ASSESSMENTS,
+      ID.unique(),
+      {
+        claim_id: claimId,
+        // Damage age assessment
+        damage_age_estimated: analysisData.damageAgeAssessment?.estimatedAge || null,
+        damage_age_confidence: analysisData.damageAgeAssessment?.confidenceScore ?? null,
+        damage_age_data_json: analysisData.damageAgeAssessment
+          ? JSON.stringify({
+              reasoning: analysisData.damageAgeAssessment.reasoning,
+              indicators: analysisData.damageAgeAssessment.indicators,
+            })
+          : null,
+        // Contamination assessment
+        contamination_detected: analysisData.contaminationAssessment?.contaminationDetected ?? false,
+        contamination_data_json: analysisData.contaminationAssessment
+          ? JSON.stringify({
+              riskLevel: analysisData.contaminationAssessment.fraudRiskLevel,
+              notes: analysisData.contaminationAssessment.notes,
+              contaminants: analysisData.contaminationAssessment.contaminants,
+            })
+          : null,
+        // Rust/corrosion assessment
+        rust_detected: analysisData.rustCorrosionAssessment?.rustDetected ?? false,
+        rust_fraud_indicator: analysisData.rustCorrosionAssessment?.fraudIndicator ?? false,
+        rust_data_json: analysisData.rustCorrosionAssessment
+          ? JSON.stringify({
+              corrosionLevel: analysisData.rustCorrosionAssessment.overallCorrosionLevel,
+              estimatedAge: analysisData.rustCorrosionAssessment.estimatedCorrosionAge,
+              notes: analysisData.rustCorrosionAssessment.notes,
+              affectedAreas: analysisData.rustCorrosionAssessment.corrosionAreas,
+            })
+          : null,
+        // Pre-existing damage assessment
+        pre_existing_detected: analysisData.preExistingDamageAssessment?.preExistingDamageDetected ?? false,
+        pre_existing_risk_level: analysisData.preExistingDamageAssessment?.fraudRiskLevel || null,
+        pre_existing_data_json: analysisData.preExistingDamageAssessment
+          ? JSON.stringify({
+              damageConsistency: analysisData.preExistingDamageAssessment.damageConsistency,
+              notes: analysisData.preExistingDamageAssessment.notes,
+              preExistingItems: analysisData.preExistingDamageAssessment.preExistingItems,
+            })
+          : null,
+      },
+      getClaimRelatedPermissions(userId, teamId)
+    );
+
+    // Debug: Log fraud assessment data
+    console.log('🔍 Fraud assessment data:', {
+      damage_age: analysisData.damageAgeAssessment?.estimatedAge || 'N/A',
+      contamination: analysisData.contaminationAssessment?.contaminationDetected ?? false,
+      rust: analysisData.rustCorrosionAssessment?.rustDetected ?? false,
+      pre_existing: analysisData.preExistingDamageAssessment?.preExistingDamageDetected ?? false,
+    });
+
+    // 7. Wait for all related documents to be created
     await Promise.all([
       ...damageDetailsPromises,
       verificationPromise,
       assessmentPromise,
+      fraudAssessmentPromise,
     ]);
 
     return { success: true, data: claim };
