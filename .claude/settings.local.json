@@ -16,7 +16,22 @@
       "Bash(cd:*)",
       "Bash(npm install:*)",
       "Bash(npm ls:*)",
-      "Bash(npm search:*)"
+      "Bash(npm search:*)",
+      "Bash(npm run build)",
+      "Bash(ngrok http:*)",
+      "Bash(where:*)",
+      "Bash(cmd.exe /c \"start /B ngrok http 3000 > %TEMP%\\\\ngrok_output.txt 2>&1\")",
+      "Bash(ngrok config add-authtoken:*)",
+      "Bash(ngrok:*)",
+      "Bash(npm show:*)",
+      "Bash(npm run ngrok:*)",
+      "Bash(npx ngrok:*)",
+      "Bash(exit 0)",
+      "Bash(\"C:\\\\Users\\\\wanma\\\\OneDrive - Dalo6116\\\\Desktop\\\\websites\\\\insurance\\\\node_modules\\\\ngrok\\\\bin\\\\ngrok.exe\" --version)",
+      "Bash(node -e:*)",
+      "Bash(taskkill:*)",
+      "Bash(tasklist:*)",
+      "Bash(npm run lint)"
     ]
   }
 }

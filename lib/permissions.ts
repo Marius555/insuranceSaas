@@ -6,23 +6,23 @@ import { Permission, Role } from 'node-appwrite';
  */
 
 /**
- * Generate permissions for a claim document
+ * Generate permissions for a report document
  *
- * @param userId - The user who created the claim
+ * @param userId - The user who created the report
  * @param insuranceCompanyTeamId - The team ID of the insurance company (optional)
- * @param isPublic - Whether the claim should be publicly readable
+ * @param isPublic - Whether the report should be publicly readable
  * @returns Array of permission strings
  *
  * @example
- * // User creates claim with insurance company
- * getClaimPermissions(userId, teamId, false)
+ * // User creates report with insurance company
+ * getReportPermissions(userId, teamId, false)
  * // Returns: [Permission.read(Role.user(userId)), Permission.read(Role.team(teamId)), Permission.update(Role.team(teamId))]
  *
- * // Approved claim made public
- * getClaimPermissions(userId, teamId, true)
+ * // Approved report made public
+ * getReportPermissions(userId, teamId, true)
  * // Returns: [...previous, Permission.read(Role.any())]
  */
-export function getClaimPermissions(
+export function getReportPermissions(
   userId: string,
   insuranceCompanyTeamId?: string,
   isPublic = false
@@ -46,18 +46,18 @@ export function getClaimPermissions(
 }
 
 /**
- * Generate permissions for claim-related documents (damage_details, vehicle_verification, assessments)
- * Same as claim permissions but without the public option
+ * Generate permissions for report-related documents (damage_details, vehicle_verification, assessments)
+ * Same as report permissions but without the public option
  *
- * @param userId - The user who created the claim
+ * @param userId - The user who created the report
  * @param insuranceCompanyTeamId - The team ID of the insurance company (optional)
  * @returns Array of permission strings
  *
  * @example
- * getClaimRelatedPermissions(userId, teamId)
+ * getReportRelatedPermissions(userId, teamId)
  * // Returns: [Permission.read(Role.user(userId)), Permission.read(Role.team(teamId)), Permission.update(Role.team(teamId))]
  */
-export function getClaimRelatedPermissions(
+export function getReportRelatedPermissions(
   userId: string,
   insuranceCompanyTeamId?: string
 ): string[] {

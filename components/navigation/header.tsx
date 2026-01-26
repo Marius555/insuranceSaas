@@ -116,9 +116,17 @@ export function Header({ session, userDoc }: HeaderProps) {
               </Button>
             </form>
           ) : (
-            <Button onClick={() => setShowSignInModal(true)}>
-              Sign In
-            </Button>
+            <>
+              <Link href="/test-login" className="text-sm text-muted-foreground hover:text-foreground">
+                Test Login
+              </Link>
+              <Link href="/test-signup" className="text-sm text-muted-foreground hover:text-foreground">
+                Test Signup
+              </Link>
+              <Button onClick={() => setShowSignInModal(true)}>
+                Sign In
+              </Button>
+            </>
           )}
         </div>
 
@@ -181,15 +189,27 @@ export function Header({ session, userDoc }: HeaderProps) {
                   </Button>
                 </form>
               ) : (
-                <Button
-                  onClick={() => {
-                    setShowSignInModal(true);
-                    setMobileMenuOpen(false);
-                  }}
-                  className="w-full"
-                >
-                  Sign In
-                </Button>
+                <>
+                  <Link href="/test-login" onClick={() => setMobileMenuOpen(false)}>
+                    <Button variant="ghost" className="w-full justify-start text-muted-foreground">
+                      Test Login
+                    </Button>
+                  </Link>
+                  <Link href="/test-signup" onClick={() => setMobileMenuOpen(false)}>
+                    <Button variant="ghost" className="w-full justify-start text-muted-foreground">
+                      Test Signup
+                    </Button>
+                  </Link>
+                  <Button
+                    onClick={() => {
+                      setShowSignInModal(true);
+                      setMobileMenuOpen(false);
+                    }}
+                    className="w-full"
+                  >
+                    Sign In
+                  </Button>
+                </>
               )}
             </div>
           </nav>

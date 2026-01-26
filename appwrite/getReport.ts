@@ -2,7 +2,7 @@
 
 import { adminAction } from '@/appwrite/adminOrClient';
 import { DATABASE_ID, COLLECTION_IDS } from '@/lib/env';
-import { fetchFullClaimData, type FullClaimData } from '@/lib/types/appwrite';
+import { fetchFullReportData, type FullReportData } from '@/lib/types/appwrite';
 import { getFileUrl, getFileDownloadUrl } from '@/appwrite/storage';
 
 export interface MediaFile {
@@ -17,36 +17,36 @@ export interface PolicyFile {
   downloadUrl: string;
 }
 
-export interface ClaimWithFiles extends FullClaimData {
+export interface ReportWithFiles extends FullReportData {
   mediaFiles: MediaFile[];
   policyFile: PolicyFile | null;
 }
 
 /**
- * Fetch claim data with generated file URLs
+ * Fetch report data with generated file URLs
  *
- * @param claimId - Claim document ID
- * @returns Claim data with file URLs or error
+ * @param reportId - Report document ID
+ * @returns Report data with file URLs or error
  */
-export async function getClaimById(claimId: string): Promise<{
+export async function getReportById(reportId: string): Promise<{
   success: boolean;
-  data?: ClaimWithFiles;
+  data?: ReportWithFiles;
   message?: string;
 }> {
   try {
     const { databases } = await adminAction();
 
-    // Fetch full claim data (claim + damage details + verification + assessment)
-    const fullClaim = await fetchFullClaimData(
+    // Fetch full report data (report + damage details + verification + assessment)
+    const fullReport = await fetchFullReportData(
       databases,
       DATABASE_ID,
       COLLECTION_IDS,
-      claimId
+      reportId
     );
 
     // Generate media file URLs from file IDs
     const mediaFiles: MediaFile[] = await Promise.all(
-      (fullClaim.claim.media_file_ids || []).map(async (fileId) => ({
+      (fullReport.report.media_file_ids || []).map(async (fileId) => ({
         fileId,
         url: await getFileUrl(fileId),
         downloadUrl: await getFileDownloadUrl(fileId),
@@ -55,36 +55,36 @@ export async function getClaimById(claimId: string): Promise<{
 
     // Generate policy file URLs if policy exists
     let policyFile: PolicyFile | null = null;
-    if (fullClaim.claim.policy_file_id) {
+    if (fullReport.report.policy_file_id) {
       policyFile = {
-        fileId: fullClaim.claim.policy_file_id,
-        url: await getFileUrl(fullClaim.claim.policy_file_id),
-        downloadUrl: await getFileDownloadUrl(fullClaim.claim.policy_file_id),
+        fileId: fullReport.report.policy_file_id,
+        url: await getFileUrl(fullReport.report.policy_file_id),
+        downloadUrl: await getFileDownloadUrl(fullReport.report.policy_file_id),
       };
     }
 
     return {
       success: true,
       data: {
-        ...fullClaim,
+        ...fullReport,
         mediaFiles,
         policyFile,
       },
     };
   } catch (error: any) {
-    console.error('Failed to fetch claim:', error);
+    console.error('Failed to fetch report:', error);
 
     // Handle specific error cases
     if (error.code === 404) {
       return {
         success: false,
-        message: 'Claim not found',
+        message: 'Report not found',
       };
     }
 
     return {
       success: false,
-      message: error.message || 'Failed to fetch claim data',
+      message: error.message || 'Failed to fetch report data',
     };
   }
 }

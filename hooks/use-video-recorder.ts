@@ -30,7 +30,7 @@ function getSupportedMimeType(): string {
   // Check for iOS Safari
   const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
 
-  // Priority order based on browser support and compression efficiency
+  // Priority order: prefer H.264 for better quality retention in forensic footage
   const types = isIOS
     ? [
         "video/mp4;codecs=h264,aac",
@@ -39,12 +39,13 @@ function getSupportedMimeType(): string {
         "video/webm",
       ]
     : [
-        "video/webm;codecs=vp9,opus",
+        "video/webm;codecs=h264",       // H.264 in WebM (Chrome/Edge 108+)
+        "video/mp4;codecs=h264,aac",    // H.264 in MP4
+        "video/webm;codecs=vp9,opus",   // VP9 fallback
         "video/webm;codecs=vp8,opus",
         "video/webm;codecs=vp9",
         "video/webm;codecs=vp8",
         "video/webm",
-        "video/mp4;codecs=h264,aac",
         "video/mp4",
       ];
 
@@ -58,11 +59,10 @@ function getSupportedMimeType(): string {
 }
 
 function getVideoBitsPerSecond(): number {
-  // Target ~1.5 Mbps for video to keep 20 second video under 20MB
-  // 20MB = 160Mbit, 160Mbit / 20s = 8Mbps total
-  // Account for audio (~128kbps) and overhead, aim for ~6Mbps video
-  // But be conservative for compression: 1.5Mbps
-  return 1_500_000;
+  // Target 8 Mbps for forensic quality video capture
+  // 45s recording at 8 Mbps ≈ 45 MB before compression
+  // Existing compression handles files over 20 MB
+  return 8_000_000;
 }
 
 export function useVideoRecorder(

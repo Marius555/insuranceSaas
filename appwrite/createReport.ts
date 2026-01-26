@@ -3,13 +3,13 @@
 import { adminAction } from '@/appwrite/adminOrClient';
 import { DATABASE_ID, COLLECTION_IDS } from '@/lib/env';
 import { ID } from 'node-appwrite';
-import { getClaimPermissions, getClaimRelatedPermissions } from '@/lib/permissions';
+import { getReportPermissions, getReportRelatedPermissions } from '@/lib/permissions';
 import type { EnhancedAutoDamageAnalysis } from '@/lib/gemini/types';
-import type { ClaimDocument, InsuranceCompanyDocument } from '@/lib/types/appwrite';
+import type { ReportDocument, InsuranceCompanyDocument } from '@/lib/types/appwrite';
 
 /**
- * Claim Creation Server Action
- * Creates a claim with all related documents and proper permissions
+ * Report Creation Server Action
+ * Creates a report with all related documents and proper permissions
  */
 
 /**
@@ -202,6 +202,7 @@ function normalizeRepairComplexity(
     'difficult': 'complex',
     'advanced': 'complex',
     'involved': 'complex',
+    'high': 'complex',
 
     // Aliases for extensive
     'severe': 'extensive',
@@ -470,24 +471,24 @@ function toValidInteger(
   return undefined;
 }
 
-export interface CreateClaimResult {
+export interface CreateReportResult {
   success: boolean;
-  data?: ClaimDocument;
+  data?: ReportDocument;
   message?: string;
 }
 
 /**
- * Create a claim from Gemini analysis data
+ * Create a report from Gemini analysis data
  *
- * @param userId - The user creating the claim
+ * @param userId - The user creating the report
  * @param insuranceCompanyId - The insurance company ID (optional)
  * @param analysisData - The Gemini analysis result
  * @param mediaFileIds - IDs of uploaded media files (images/videos)
  * @param policyFileId - ID of uploaded policy PDF (optional)
- * @returns Created claim or error
+ * @returns Created report or error
  *
  * @example
- * const result = await createClaimFromAnalysis(
+ * const result = await createReportFromAnalysis(
  *   userId,
  *   insuranceCompanyId,
  *   geminiAnalysisData,
@@ -496,16 +497,16 @@ export interface CreateClaimResult {
  * );
  *
  * if (result.success) {
- *   console.log('Claim created:', result.data);
+ *   console.log('Report created:', result.data);
  * }
  */
-export async function createClaimFromAnalysis(
+export async function createReportFromAnalysis(
   userId: string,
   insuranceCompanyId: string | undefined,
   analysisData: EnhancedAutoDamageAnalysis,
   mediaFileIds: string[],
   policyFileId?: string
-): Promise<CreateClaimResult> {
+): Promise<CreateReportResult> {
   try {
     const { databases } = await adminAction();
 
@@ -520,17 +521,17 @@ export async function createClaimFromAnalysis(
       teamId = company.team_id;
     }
 
-    const claimId = ID.unique();
+    const reportId = ID.unique();
 
-    // 2. Create main claim with permissions
-    const claim = await databases.createDocument<ClaimDocument>(
+    // 2. Create main report with permissions
+    const report = await databases.createDocument<ReportDocument>(
       DATABASE_ID,
-      COLLECTION_IDS.CLAIMS,
-      claimId,
+      COLLECTION_IDS.REPORTS,
+      reportId,
       {
         user_id: userId,
         insurance_company_id: insuranceCompanyId,
-        claim_number: generateClaimNumber(),
+        claim_number: generateReportNumber(),
         claim_status: 'pending',
         damage_type: normalizeDamageType(analysisData.damageType),
         damage_cause: toValidString(analysisData.damageCause, 500, 'damage_cause'),
@@ -552,7 +553,7 @@ export async function createClaimFromAnalysis(
         analysis_timestamp: new Date().toISOString(),
         is_public: false,
       },
-      getClaimPermissions(userId, teamId, false)
+      getReportPermissions(userId, teamId, false)
     );
 
     // Debug: Log damaged parts to identify invalid severity values
@@ -574,10 +575,10 @@ export async function createClaimFromAnalysis(
 
       return databases.createDocument(
         DATABASE_ID,
-        COLLECTION_IDS.CLAIM_DAMAGE_DETAILS,
+        COLLECTION_IDS.REPORT_DAMAGE_DETAILS,
         ID.unique(),
         {
-          claim_id: claimId,
+          claim_id: reportId,
           part_name: part.part,
           severity: normalizedSeverity,
           description: part.description,
@@ -589,17 +590,17 @@ export async function createClaimFromAnalysis(
           rust_present: part.rustPresent ?? false,
           pre_existing: part.preExisting ?? false,
         },
-        getClaimRelatedPermissions(userId, teamId)
+        getReportRelatedPermissions(userId, teamId)
       );
     });
 
     // 4. Create vehicle verification document
     const verificationPromise = databases.createDocument(
       DATABASE_ID,
-      COLLECTION_IDS.CLAIM_VEHICLE_VERIFICATION,
+      COLLECTION_IDS.REPORT_VEHICLE_VERIFICATION,
       ID.unique(),
       {
-        claim_id: claimId,
+        claim_id: reportId,
         video_license_plate: analysisData.vehicleVerification.videoVehicle.licensePlate,
         video_vin: analysisData.vehicleVerification.videoVehicle.vin,
         video_make: analysisData.vehicleVerification.videoVehicle.make,
@@ -625,7 +626,7 @@ export async function createClaimFromAnalysis(
         confidence_score: analysisData.vehicleVerification.confidenceScore,
         notes: analysisData.vehicleVerification.notes,
       },
-      getClaimRelatedPermissions(userId, teamId)
+      getReportRelatedPermissions(userId, teamId)
     );
 
     // Debug: Log coverage limits to identify invalid values
@@ -646,10 +647,10 @@ export async function createClaimFromAnalysis(
     // 5. Create assessment document
     const assessmentPromise = databases.createDocument(
       DATABASE_ID,
-      COLLECTION_IDS.CLAIM_ASSESSMENTS,
+      COLLECTION_IDS.REPORT_ASSESSMENTS,
       ID.unique(),
       {
-        claim_id: claimId,
+        claim_id: reportId,
         coverage_types: toValidStringArray(analysisData.policyAnalysis.coverageTypes, 100, 'coverage_types'),
         deductible_types: toValidStringArray(analysisData.policyAnalysis.deductibles.map(d => d.type), 50, 'deductible_types'),
         deductible_amounts: analysisData.policyAnalysis.deductibles.map(d => d.amount),
@@ -669,7 +670,7 @@ export async function createClaimFromAnalysis(
         reasoning: analysisData.claimAssessment.reasoning,
         policy_references: toValidStringArray(analysisData.claimAssessment.policyReferences, 1200, 'policy_references'),
       },
-      getClaimRelatedPermissions(userId, teamId)
+      getReportRelatedPermissions(userId, teamId)
     );
 
     // Debug: Log assessment data before creation
@@ -683,10 +684,10 @@ export async function createClaimFromAnalysis(
     // 6. Create fraud assessment document
     const fraudAssessmentPromise = databases.createDocument(
       DATABASE_ID,
-      COLLECTION_IDS.CLAIM_FRAUD_ASSESSMENTS,
+      COLLECTION_IDS.REPORT_FRAUD_ASSESSMENTS,
       ID.unique(),
       {
-        claim_id: claimId,
+        claim_id: reportId,
         // Damage age assessment
         damage_age_estimated: analysisData.damageAgeAssessment?.estimatedAge || null,
         damage_age_confidence: analysisData.damageAgeAssessment?.confidenceScore ?? null,
@@ -727,7 +728,7 @@ export async function createClaimFromAnalysis(
             })
           : null,
       },
-      getClaimRelatedPermissions(userId, teamId)
+      getReportRelatedPermissions(userId, teamId)
     );
 
     // Debug: Log fraud assessment data
@@ -746,61 +747,61 @@ export async function createClaimFromAnalysis(
       fraudAssessmentPromise,
     ]);
 
-    return { success: true, data: claim };
+    return { success: true, data: report };
   } catch (error: any) {
-    console.error('Failed to create claim:', error);
+    console.error('Failed to create report:', error);
     return {
       success: false,
-      message: error.message || 'Failed to create claim',
+      message: error.message || 'Failed to create report',
     };
   }
 }
 
 /**
- * Generate a unique claim number
- * Format: CLM-{timestamp}-{random}
+ * Generate a unique report number
+ * Format: RPT-{timestamp}-{random}
  *
- * @returns Unique claim number
+ * @returns Unique report number
  *
  * @example
- * generateClaimNumber()
- * // Returns: "CLM-1704123456789-A3B4C5D6E"
+ * generateReportNumber()
+ * // Returns: "RPT-1704123456789-A3B4C5D6E"
  */
-function generateClaimNumber(): string {
+function generateReportNumber(): string {
   const timestamp = Date.now();
   const random = Math.random().toString(36).substring(2, 11).toUpperCase();
-  return `CLM-${timestamp}-${random}`;
+  return `RPT-${timestamp}-${random}`;
 }
 
 /**
- * Update claim status and optionally make it public
- * Used by insurance adjusters to approve/deny claims
+ * Update report status and optionally make it public
+ * Used by insurance adjusters to approve/deny reports
  *
- * @param claimId - The claim document ID
- * @param status - New claim status
- * @param isPublic - Whether to make the claim publicly readable
- * @returns Updated claim or error
+ * @param reportId - The report document ID
+ * @param status - New report status
+ * @param isPublic - Whether to make the report publicly readable
+ * @returns Updated report or error
  */
-export async function updateClaimStatus(
-  claimId: string,
+export async function updateReportStatus(
+  reportId: string,
   status: 'pending' | 'approved' | 'denied' | 'partial' | 'needs_investigation',
   isPublic = false
-): Promise<CreateClaimResult> {
+): Promise<CreateReportResult> {
   try {
     const { databases } = await adminAction();
 
-    // Get existing claim to preserve permissions
-    const existingClaim = await databases.getDocument<ClaimDocument>(
+    // Get existing report to preserve permissions
+    const existingReport = await databases.getDocument<ReportDocument>(
       DATABASE_ID,
-      COLLECTION_IDS.CLAIMS,
-      claimId
+      COLLECTION_IDS.REPORTS,
+      reportId
     );
 
     // If making public and approved, add public read permission
-    let permissions = existingClaim.$permissions;
+    let permissions = existingReport.$permissions;
     if (isPublic && status === 'approved') {
-      const userId = existingClaim.user_id;
-      const insuranceCompanyId = existingClaim.insurance_company_id;
+      const userId = existingReport.user_id;
+      const insuranceCompanyId = existingReport.insurance_company_id;
 
       let teamId: string | undefined;
       if (insuranceCompanyId) {
@@ -812,14 +813,14 @@ export async function updateClaimStatus(
         teamId = company.team_id;
       }
 
-      permissions = getClaimPermissions(userId, teamId, true);
+      permissions = getReportPermissions(userId, teamId, true);
     }
 
-    // Update claim
-    const claim = await databases.updateDocument<ClaimDocument>(
+    // Update report
+    const report = await databases.updateDocument<ReportDocument>(
       DATABASE_ID,
-      COLLECTION_IDS.CLAIMS,
-      claimId,
+      COLLECTION_IDS.REPORTS,
+      reportId,
       {
         claim_status: status,
         is_public: isPublic,
@@ -827,12 +828,12 @@ export async function updateClaimStatus(
       permissions
     );
 
-    return { success: true, data: claim };
+    return { success: true, data: report };
   } catch (error: any) {
-    console.error('Failed to update claim status:', error);
+    console.error('Failed to update report status:', error);
     return {
       success: false,
-      message: error.message || 'Failed to update claim status',
+      message: error.message || 'Failed to update report status',
     };
   }
 }

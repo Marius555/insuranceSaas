@@ -4,12 +4,12 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { QuickAnalysisTab } from "./quick-analysis-tab";
 import { PolicyAnalysisTab } from "./policy-analysis-tab";
 
-export function ClaimAnalysisPage() {
+export function ReportAnalysisPage() {
   return (
     <div className="container mx-auto p-8 max-w-6xl">
       {/* Header */}
       <header className="mb-8">
-        <h1 className="text-3xl font-bold">Insurance Claim Analysis</h1>
+        <h1 className="text-3xl font-bold">Insurance Damage Report</h1>
         <p className="text-muted-foreground mt-2">
           AI-powered damage assessment with fraud prevention
         </p>

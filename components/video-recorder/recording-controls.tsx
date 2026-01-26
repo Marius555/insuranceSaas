@@ -29,6 +29,10 @@ export function RecordingControls({
   const progress = (duration / maxDuration) * 100;
   const remainingSeconds = maxDuration - duration;
 
+  // Disable cancel during the transition between stop and preview
+  // (recording stopped but video is still being processed)
+  const isStopProcessing = !isRecording && duration > 0;
+
   return (
     <div className="flex flex-col items-center gap-6">
       {/* Timer display */}
@@ -63,6 +67,7 @@ export function RecordingControls({
               variant="ghost"
               onClick={onCancel}
               className="px-6"
+              disabled={isStopProcessing}
             >
               Cancel
             </Button>

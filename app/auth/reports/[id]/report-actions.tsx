@@ -6,16 +6,16 @@ import { HugeiconsIcon } from '@hugeicons/react';
 import { Download01Icon, PrinterIcon } from '@hugeicons/core-free-icons';
 import jsPDF from 'jspdf';
 
-interface ClaimData {
-  claim: Record<string, unknown>;
+interface ReportData {
+  report: Record<string, unknown>;
   damageDetails: Record<string, unknown>[];
   vehicleVerification: Record<string, unknown> | null;
   assessment: Record<string, unknown> | null;
-  claimNumber: string;
+  reportNumber: string;
 }
 
-interface ClaimActionsProps {
-  claimData: ClaimData;
+interface ReportActionsProps {
+  reportData: ReportData;
 }
 
 const formatStatus = (status: string) => {
@@ -32,7 +32,7 @@ const formatDate = (dateString: string) => {
   });
 };
 
-export function ClaimActions({ claimData }: ClaimActionsProps) {
+export function ReportActions({ reportData }: ReportActionsProps) {
   const [isGenerating, setIsGenerating] = useState(false);
 
   const handlePrint = () => {
@@ -43,7 +43,7 @@ export function ClaimActions({ claimData }: ClaimActionsProps) {
     setIsGenerating(true);
 
     try {
-      const { claim, damageDetails, vehicleVerification, assessment } = claimData;
+      const { report, damageDetails, vehicleVerification, assessment } = reportData;
 
       // Create PDF using jsPDF directly (no html2canvas = no color parsing errors)
       const doc = new jsPDF({
@@ -76,7 +76,7 @@ export function ClaimActions({ claimData }: ClaimActionsProps) {
       doc.setFontSize(20);
       doc.setFont('helvetica', 'bold');
       doc.setTextColor(17, 24, 39);
-      doc.text(`Claim Report: ${claim.claim_number}`, margin, y);
+      doc.text(`Damage Report: ${report.claim_number}`, margin, y);
       y += 8;
 
       doc.setFontSize(10);
@@ -88,33 +88,33 @@ export function ClaimActions({ claimData }: ClaimActionsProps) {
       drawLine(y);
       y += 10;
 
-      // Claim Overview Section
+      // Report Overview Section
       checkPageBreak(60);
       doc.setFontSize(12);
       doc.setFont('helvetica', 'bold');
       doc.setTextColor(55, 65, 81);
-      doc.text('CLAIM OVERVIEW', margin, y);
+      doc.text('REPORT OVERVIEW', margin, y);
       y += 2;
       drawLine(y);
       y += 8;
 
       // Overview table rows
       const overviewRows: [string, string][] = [
-        ['Claim Number', String(claim.claim_number)],
-        ['Analysis Date', formatDate(claim.analysis_timestamp as string)],
-        ['Damage Type', String(claim.damage_type).charAt(0).toUpperCase() + String(claim.damage_type).slice(1)],
-        ['Overall Severity', formatStatus(claim.overall_severity as string)],
-        ['Confidence Score', `${((claim.confidence_score as number) * 100).toFixed(0)}%`],
+        ['Report Number', String(report.claim_number)],
+        ['Analysis Date', formatDate(report.analysis_timestamp as string)],
+        ['Damage Type', String(report.damage_type).charAt(0).toUpperCase() + String(report.damage_type).slice(1)],
+        ['Overall Severity', formatStatus(report.overall_severity as string)],
+        ['Confidence Score', `${((report.confidence_score as number) * 100).toFixed(0)}%`],
       ];
 
-      if (claim.claim_status && claim.claim_status !== 'pending') {
-        overviewRows.push(['Status', formatStatus(claim.claim_status as string)]);
+      if (report.claim_status && report.claim_status !== 'pending') {
+        overviewRows.push(['Status', formatStatus(report.claim_status as string)]);
       }
 
-      if (claim.investigation_needed) {
+      if (report.investigation_needed) {
         overviewRows.push(['Investigation', 'Required']);
-        if (claim.investigation_reason) {
-          overviewRows.push(['Investigation Reason', String(claim.investigation_reason)]);
+        if (report.investigation_reason) {
+          overviewRows.push(['Investigation Reason', String(report.investigation_reason)]);
         }
       }
 
@@ -354,10 +354,10 @@ export function ClaimActions({ claimData }: ClaimActionsProps) {
       doc.setFontSize(9);
       doc.setFont('helvetica', 'normal');
       doc.setTextColor(156, 163, 175);
-      doc.text(`This report was automatically generated. Claim ID: ${claim.$id || 'N/A'}`, pageWidth / 2, y, { align: 'center' });
+      doc.text(`This report was automatically generated. Report ID: ${report.$id || 'N/A'}`, pageWidth / 2, y, { align: 'center' });
 
       // Save the PDF
-      doc.save(`claim-${claimData.claimNumber}.pdf`);
+      doc.save(`report-${reportData.reportNumber}.pdf`);
     } catch (error) {
       console.error('Error generating PDF:', error);
     } finally {
@@ -372,17 +372,17 @@ export function ClaimActions({ claimData }: ClaimActionsProps) {
         size="sm"
         className="h-9 w-9 p-0"
         onClick={handlePrint}
-        title="Print claim"
+        title="Print report"
       >
         <HugeiconsIcon icon={PrinterIcon} size={16} />
-        <span className="sr-only">Print claim</span>
+        <span className="sr-only">Print report</span>
       </Button>
       <Button
         variant="outline"
         size="sm"
         className="h-9 w-9 p-0"
         onClick={handleDownload}
-        title="Download claim as PDF"
+        title="Download report as PDF"
         disabled={isGenerating}
       >
         {isGenerating ? (
@@ -390,7 +390,7 @@ export function ClaimActions({ claimData }: ClaimActionsProps) {
         ) : (
           <HugeiconsIcon icon={Download01Icon} size={16} />
         )}
-        <span className="sr-only">Download claim as PDF</span>
+        <span className="sr-only">Download report as PDF</span>
       </Button>
     </div>
   );

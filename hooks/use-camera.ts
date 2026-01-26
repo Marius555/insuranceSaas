@@ -9,22 +9,63 @@ interface UseCameraOptions {
   videoConstraints?: MediaTrackConstraints;
 }
 
+export interface CameraSettings {
+  resolution: string;
+  width: number;
+  height: number;
+  frameRate: number;
+  focusMode: string;
+}
+
 interface UseCameraReturn {
   stream: MediaStream | null;
   videoRef: React.RefObject<HTMLVideoElement | null>;
   error: string | null;
   permissionState: PermissionState;
   isLoading: boolean;
+  cameraSettings: CameraSettings | null;
   requestPermission: () => Promise<boolean>;
   stopCamera: () => void;
 }
 
+// Forensic quality constraints for 1080p capture
 const defaultConstraints: MediaTrackConstraints = {
   facingMode: { ideal: "environment" },
-  width: { ideal: 1280 },
-  height: { ideal: 720 },
+  width: { ideal: 1920, min: 1280 },
+  height: { ideal: 1080, min: 720 },
   frameRate: { ideal: 30, max: 30 },
 };
+
+// Advanced constraints with continuous autofocus (if supported)
+const advancedConstraints: MediaTrackConstraints = {
+  ...defaultConstraints,
+  // @ts-expect-error - focusMode is not in the standard type definitions but is supported by many browsers
+  focusMode: { ideal: "continuous" },
+};
+
+// Helper to extract camera settings from stream
+function extractCameraSettings(mediaStream: MediaStream): CameraSettings {
+  const videoTrack = mediaStream.getVideoTracks()[0];
+  const settings = videoTrack?.getSettings() ?? {};
+
+  const width = settings.width ?? 0;
+  const height = settings.height ?? 0;
+  const frameRate = settings.frameRate ?? 30;
+  // @ts-expect-error - focusMode is not in standard type definitions
+  const focusMode = settings.focusMode ?? "unknown";
+
+  // Determine resolution label
+  let resolution = "unknown";
+  if (width >= 1920 && height >= 1080) {
+    resolution = "1080p (Full HD)";
+  } else if (width >= 1280 && height >= 720) {
+    resolution = "720p (HD)";
+  } else if (width > 0 && height > 0) {
+    resolution = `${width}x${height}`;
+  }
+
+  return { resolution, width, height, frameRate, focusMode };
+}
 
 export function useCamera(options: UseCameraOptions = {}): UseCameraReturn {
   const { preferBackCamera = true, videoConstraints } = options;
@@ -34,6 +75,7 @@ export function useCamera(options: UseCameraOptions = {}): UseCameraReturn {
   const [permissionState, setPermissionState] =
     useState<PermissionState>("prompt");
   const [isLoading, setIsLoading] = useState(false);
+  const [cameraSettings, setCameraSettings] = useState<CameraSettings | null>(null);
 
   const videoRef = useRef<HTMLVideoElement | null>(null);
 
@@ -66,21 +108,36 @@ export function useCamera(options: UseCameraOptions = {}): UseCameraReturn {
     setError(null);
 
     try {
-      const constraints: MediaStreamConstraints = {
-        video: videoConstraints || {
-          ...defaultConstraints,
-          facingMode: preferBackCamera
-            ? { ideal: "environment" }
-            : { ideal: "user" },
-        },
-        audio: true,
+      const facingMode = preferBackCamera ? { ideal: "environment" } : { ideal: "user" };
+
+      // Try advanced constraints first (with continuous autofocus)
+      const advancedVideoConstraints = videoConstraints || {
+        ...advancedConstraints,
+        facingMode,
       };
 
-      const mediaStream =
-        await navigator.mediaDevices.getUserMedia(constraints);
+      let mediaStream: MediaStream;
+
+      try {
+        mediaStream = await navigator.mediaDevices.getUserMedia({
+          video: advancedVideoConstraints,
+          audio: true,
+        });
+      } catch {
+        // Fall back to default constraints without advanced features
+        const defaultVideoConstraints = videoConstraints || {
+          ...defaultConstraints,
+          facingMode,
+        };
+        mediaStream = await navigator.mediaDevices.getUserMedia({
+          video: defaultVideoConstraints,
+          audio: true,
+        });
+      }
 
       setStream(mediaStream);
       setPermissionState("granted");
+      setCameraSettings(extractCameraSettings(mediaStream));
 
       if (videoRef.current) {
         videoRef.current.srcObject = mediaStream;
@@ -126,6 +183,7 @@ export function useCamera(options: UseCameraOptions = {}): UseCameraReturn {
             });
             setStream(fallbackStream);
             setPermissionState("granted");
+            setCameraSettings(extractCameraSettings(fallbackStream));
 
             if (videoRef.current) {
               videoRef.current.srcObject = fallbackStream;
@@ -162,6 +220,7 @@ export function useCamera(options: UseCameraOptions = {}): UseCameraReturn {
     error,
     permissionState,
     isLoading,
+    cameraSettings,
     requestPermission,
     stopCamera,
   };

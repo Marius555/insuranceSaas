@@ -1,5 +1,6 @@
 "use client";
 
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -11,18 +12,25 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import type { ClaimDocument } from "@/lib/types/appwrite";
+import type { ReportDocument } from "@/lib/types/appwrite";
+import { getUserLocation } from "@/lib/utils/country-detection";
 
-interface ClaimsTableProps {
-  claims: ClaimDocument[];
+interface ReportsTableProps {
+  reports: ReportDocument[];
 }
 
-export function ClaimsTable({ claims }: ClaimsTableProps) {
+export function ReportsTable({ reports }: ReportsTableProps) {
   const router = useRouter();
+  const [currencySymbol, setCurrencySymbol] = useState("$");
+
+  useEffect(() => {
+    setCurrencySymbol(getUserLocation().currencySymbol);
+  }, []);
 
   const getStatusVariant = (status: string) => {
     const variants: Record<string, "default" | "secondary" | "destructive" | "outline"> = {
       approved: "default",
+      analyzed: "default",
       pending: "secondary",
       denied: "destructive",
       partial: "outline",
@@ -45,33 +53,33 @@ export function ClaimsTable({ claims }: ClaimsTableProps) {
     <div className="rounded-lg border bg-card">
       {/* Mobile: Card view */}
       <div className="md:hidden divide-y">
-        {claims.map((claim) => (
+        {reports.map((report) => (
           <div
-            key={claim.$id}
+            key={report.$id}
             className="p-4 cursor-pointer hover:bg-muted/50 active:bg-muted"
-            onClick={() => router.push(`/auth/claims/${claim.$id}`)}
+            onClick={() => router.push(`/auth/reports/${report.$id}`)}
           >
             <div className="flex items-center justify-between gap-2 mb-2">
               <span className="font-medium text-sm truncate">
-                {claim.claim_number}
+                {report.claim_number}
               </span>
-              <Badge variant={getStatusVariant(claim.claim_status)} className="shrink-0">
-                {claim.claim_status.replace('_', ' ')}
+              <Badge variant={getStatusVariant(report.claim_status)} className="shrink-0">
+                {report.claim_status.replace('_', ' ')}
               </Badge>
             </div>
             <div className="flex items-center gap-2 text-sm text-muted-foreground mb-2">
-              <span className="capitalize">{claim.damage_type}</span>
+              <span className="capitalize">{report.damage_type}</span>
               <span>•</span>
-              <Badge variant={getSeverityVariant(claim.overall_severity)} className="text-xs">
-                {claim.overall_severity.replace('_', ' ')}
+              <Badge variant={getSeverityVariant(report.overall_severity)} className="text-xs">
+                {report.overall_severity.replace('_', ' ')}
               </Badge>
             </div>
             <div className="flex items-center justify-between text-sm">
               <span className="font-medium">
-                ${claim.estimated_total_repair_cost.toLocaleString('en-US')}
+                {currencySymbol}{report.estimated_total_repair_cost.toLocaleString()}
               </span>
               <span className="text-muted-foreground">
-                {new Date(claim.analysis_timestamp).toLocaleDateString('en-US')}
+                {new Date(report.analysis_timestamp).toLocaleDateString('en-US')}
               </span>
             </div>
           </div>
@@ -83,7 +91,7 @@ export function ClaimsTable({ claims }: ClaimsTableProps) {
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead>Claim Number</TableHead>
+              <TableHead>Report Number</TableHead>
               <TableHead>Status</TableHead>
               <TableHead>Damage Type</TableHead>
               <TableHead>Severity</TableHead>
@@ -94,36 +102,36 @@ export function ClaimsTable({ claims }: ClaimsTableProps) {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {claims.map((claim) => (
+            {reports.map((report) => (
               <TableRow
-                key={claim.$id}
+                key={report.$id}
                 className="cursor-pointer hover:bg-muted/50"
-                onClick={() => router.push(`/auth/claims/${claim.$id}`)}
+                onClick={() => router.push(`/auth/reports/${report.$id}`)}
               >
                 <TableCell className="font-medium">
-                  {claim.claim_number}
+                  {report.claim_number}
                 </TableCell>
                 <TableCell>
-                  <Badge variant={getStatusVariant(claim.claim_status)}>
-                    {claim.claim_status.replace('_', ' ')}
+                  <Badge variant={getStatusVariant(report.claim_status)}>
+                    {report.claim_status.replace('_', ' ')}
                   </Badge>
                 </TableCell>
                 <TableCell className="capitalize">
-                  {claim.damage_type}
+                  {report.damage_type}
                 </TableCell>
                 <TableCell>
-                  <Badge variant={getSeverityVariant(claim.overall_severity)}>
-                    {claim.overall_severity.replace('_', ' ')}
+                  <Badge variant={getSeverityVariant(report.overall_severity)}>
+                    {report.overall_severity.replace('_', ' ')}
                   </Badge>
                 </TableCell>
                 <TableCell className="text-right">
-                  ${claim.estimated_total_repair_cost.toLocaleString('en-US')}
+                  {currencySymbol}{report.estimated_total_repair_cost.toLocaleString()}
                 </TableCell>
                 <TableCell className="text-right">
-                  {(claim.confidence_score * 100).toFixed(0)}%
+                  {(report.confidence_score * 100).toFixed(0)}%
                 </TableCell>
                 <TableCell>
-                  {new Date(claim.analysis_timestamp).toLocaleDateString('en-US')}
+                  {new Date(report.analysis_timestamp).toLocaleDateString('en-US')}
                 </TableCell>
                 <TableCell className="text-right">
                   <Button
@@ -131,7 +139,7 @@ export function ClaimsTable({ claims }: ClaimsTableProps) {
                     size="sm"
                     onClick={(e) => {
                       e.stopPropagation();
-                      router.push(`/auth/claims/${claim.$id}`);
+                      router.push(`/auth/reports/${report.$id}`);
                     }}
                   >
                     View

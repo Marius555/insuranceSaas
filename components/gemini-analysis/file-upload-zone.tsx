@@ -10,7 +10,7 @@ interface FileUploadZoneProps {
   maxFiles?: number; // for images: 5
   onFilesSelected: (files: File[]) => void;
   disabled?: boolean;
-  label: string;
+  label?: string; // Optional - can be empty for custom label handling
   description?: string;
 }
 
@@ -116,9 +116,11 @@ export function FileUploadZone({
 
   return (
     <div className="space-y-2">
-      <label className="block text-sm font-medium">
-        {label}
-      </label>
+      {label && (
+        <label className="block text-sm font-medium">
+          {label}
+        </label>
+      )}
 
       {description && (
         <p className="text-sm text-muted-foreground">{description}</p>

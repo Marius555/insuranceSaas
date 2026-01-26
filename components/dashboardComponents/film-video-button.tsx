@@ -5,13 +5,9 @@ import { VideoRecorderModal } from "@/components/video-recorder";
 import { Video02Icon } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
 
-interface FilmVideoButtonProps {
-  userId: string;
-}
-
-export function FilmVideoButton({ userId }: FilmVideoButtonProps) {
+export function FilmVideoButton() {
   return (
-    <VideoRecorderModal userId={userId}>
+    <VideoRecorderModal>
       <Button>
         <HugeiconsIcon icon={Video02Icon} /> Film video
       </Button>

@@ -4,14 +4,14 @@ import { redirect } from "next/navigation";
 import { adminAction } from "@/appwrite/adminOrClient";
 import { DATABASE_ID, COLLECTION_IDS } from "@/lib/env";
 import { Query } from "node-appwrite";
-import type { ClaimDocument } from "@/lib/types/appwrite";
+import type { ReportDocument } from "@/lib/types/appwrite";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import { Header } from "@/components/navigation/header";
 
-export default async function InsuranceClaimsPage() {
+export default async function InsuranceReportsPage() {
   const session = await getSession();
   if (!session) {
     redirect("/?auth=required");
@@ -38,11 +38,11 @@ export default async function InsuranceClaimsPage() {
     );
   }
 
-  // Get all claims for this insurance company
+  // Get all reports for this insurance company
   const { databases } = await adminAction();
-  const claimsResult = await databases.listDocuments<ClaimDocument>(
+  const reportsResult = await databases.listDocuments<ReportDocument>(
     DATABASE_ID,
-    COLLECTION_IDS.CLAIMS,
+    COLLECTION_IDS.REPORTS,
     [
       Query.equal('insurance_company_id', userDoc.insurance_company_id),
       Query.orderDesc('$createdAt'),
@@ -84,10 +84,10 @@ export default async function InsuranceClaimsPage() {
 
   // Calculate statistics
   const stats = {
-    total: claimsResult.documents.length,
-    needsInvestigation: claimsResult.documents.filter(c => c.investigation_needed).length,
-    approved: claimsResult.documents.filter(c => c.claim_status === 'approved').length,
-    denied: claimsResult.documents.filter(c => c.claim_status === 'denied').length,
+    total: reportsResult.documents.length,
+    needsInvestigation: reportsResult.documents.filter(r => r.investigation_needed).length,
+    approved: reportsResult.documents.filter(r => r.claim_status === 'approved').length,
+    denied: reportsResult.documents.filter(r => r.claim_status === 'denied').length,
   };
 
   return (
@@ -95,14 +95,14 @@ export default async function InsuranceClaimsPage() {
       <Header session={session} userDoc={userDoc} />
       <div className="container mx-auto px-4 py-8">
         <div className="mb-6">
-          <h1 className="text-3xl font-bold mb-2">Claims Review</h1>
-          <p className="text-gray-600">Review and manage submitted insurance claims</p>
+          <h1 className="text-3xl font-bold mb-2">Reports Review</h1>
+          <p className="text-gray-600">Review and manage submitted damage reports</p>
         </div>
 
         {/* Statistics Cards */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
           <Card className="p-4">
-            <div className="text-sm text-gray-600 mb-1">Total Claims</div>
+            <div className="text-sm text-gray-600 mb-1">Total Reports</div>
             <div className="text-2xl font-bold">{stats.total}</div>
           </Card>
           <Card className="p-4">
@@ -119,30 +119,30 @@ export default async function InsuranceClaimsPage() {
           </Card>
         </div>
 
-        {claimsResult.documents.length === 0 ? (
+        {reportsResult.documents.length === 0 ? (
           <Card className="p-12 text-center">
             <div className="max-w-md mx-auto">
-              <h2 className="text-xl font-semibold mb-2">No claims to review</h2>
+              <h2 className="text-xl font-semibold mb-2">No reports to review</h2>
               <p className="text-gray-600">
-                There are currently no claims submitted for your insurance company.
+                There are currently no reports submitted for your insurance company.
               </p>
             </div>
           </Card>
         ) : (
           <div className="grid gap-4">
-            {claimsResult.documents.map((claim) => (
-              <Card key={claim.$id} className="p-6 hover:shadow-md transition-shadow">
+            {reportsResult.documents.map((report) => (
+              <Card key={report.$id} className="p-6 hover:shadow-md transition-shadow">
                 <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
                   <div className="flex-1">
                     <div className="flex items-center gap-3 mb-2 flex-wrap">
-                      <h3 className="text-lg font-semibold">{claim.claim_number}</h3>
-                      <Badge className={getStatusColor(claim.claim_status || 'pending')}>
-                        {claim.claim_status || 'pending'}
+                      <h3 className="text-lg font-semibold">{report.claim_number}</h3>
+                      <Badge className={getStatusColor(report.claim_status || 'pending')}>
+                        {report.claim_status || 'pending'}
                       </Badge>
-                      <Badge className={getSeverityColor(claim.overall_severity)}>
-                        {claim.overall_severity}
+                      <Badge className={getSeverityColor(report.overall_severity)}>
+                        {report.overall_severity}
                       </Badge>
-                      {claim.investigation_needed && (
+                      {report.investigation_needed && (
                         <Badge className="bg-orange-100 text-orange-800">
                           Investigation Required
                         </Badge>
@@ -151,30 +151,30 @@ export default async function InsuranceClaimsPage() {
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-1 text-sm text-gray-600">
                       <p>
                         <span className="font-medium">Submitted:</span>{' '}
-                        {new Date(claim.analysis_timestamp).toLocaleDateString()}
+                        {new Date(report.analysis_timestamp).toLocaleDateString()}
                       </p>
                       <p>
                         <span className="font-medium">Damage Type:</span>{' '}
-                        <span className="capitalize">{claim.damage_type}</span>
+                        <span className="capitalize">{report.damage_type}</span>
                       </p>
                       <p>
                         <span className="font-medium">Confidence:</span>{' '}
-                        {(claim.confidence_score * 100).toFixed(0)}%
+                        {(report.confidence_score * 100).toFixed(0)}%
                       </p>
                       <p>
                         <span className="font-medium">Est. Repair:</span>{' '}
-                        ${claim.estimated_total_repair_cost.toLocaleString()}
+                        ${report.estimated_total_repair_cost.toLocaleString()}
                       </p>
                     </div>
-                    {claim.investigation_reason && (
+                    {report.investigation_reason && (
                       <div className="mt-2 p-2 bg-orange-50 rounded text-sm text-orange-900">
-                        <span className="font-medium">Investigation Reason:</span> {claim.investigation_reason}
+                        <span className="font-medium">Investigation Reason:</span> {report.investigation_reason}
                       </div>
                     )}
                   </div>
                   <div className="flex gap-2">
-                    <Link href={`/auth/claims/${claim.$id}`}>
-                      <Button>Review Claim</Button>
+                    <Link href={`/auth/reports/${report.$id}`}>
+                      <Button>Review Report</Button>
                     </Link>
                   </div>
                 </div>
@@ -183,10 +183,10 @@ export default async function InsuranceClaimsPage() {
           </div>
         )}
 
-        {claimsResult.documents.length > 0 && (
+        {reportsResult.documents.length > 0 && (
           <div className="mt-6 text-center">
             <p className="text-sm text-gray-600">
-              Showing {claimsResult.documents.length} of {claimsResult.total} claims
+              Showing {reportsResult.documents.length} of {reportsResult.total} reports
             </p>
           </div>
         )}

@@ -39,6 +39,9 @@ export async function analyzeVideo(
       };
     }
 
+    // Normalize MIME type: strip codec suffix (e.g., "video/webm;codecs=vp8" -> "video/webm")
+    const normalizedMimeType = mimeType.split(';')[0].trim();
+
     // Define the API call as a function
     const apiCall = async (client: any, modelName: string) => {
       console.log(`🎯 Attempting video analysis with model: ${modelName}`);
@@ -51,7 +54,7 @@ export async function analyzeVideo(
               { text: input.prompt },
               {
                 inlineData: {
-                  mimeType,
+                  mimeType: normalizedMimeType,
                   data: videoBase64,
                 },
               },
@@ -146,6 +149,14 @@ export async function analyzeVideo(
   }
 }
 
+export interface VideoQualityMetadata {
+  resolution: string;
+  bitrate: string;
+  focusMode: string;
+  duration: number;
+  qualitySeconds: number;
+}
+
 /**
  * Specialized function for auto damage assessment
  * Wrapper around analyzeVideo with optimized prompt
@@ -153,14 +164,50 @@ export async function analyzeVideo(
  * @param videoPathOrBase64 - Path to video or base64 string
  * @param mimeType - Video MIME type
  * @param isBase64 - Whether input is base64 string (default: false)
+ * @param userCountry - User's country for localized pricing
+ * @param userCurrency - User's currency code
+ * @param userCurrencySymbol - User's currency symbol
+ * @param videoQualityMetadata - Metadata about video capture quality
  * @returns Structured damage analysis
  */
 export async function analyzeAutoDamage(
   videoPathOrBase64: string,
   mimeType: VideoAnalysisInput['mimeType'],
-  isBase64 = false
+  isBase64 = false,
+  userCountry?: string,
+  userCurrency?: string,
+  userCurrencySymbol?: string,
+  videoQualityMetadata?: VideoQualityMetadata
 ): Promise<GeminiResult<{ analysis: AutoDamageAnalysis }>> {
-  const prompt = `You are an expert auto damage assessor. Analyze this vehicle damage video and provide a structured assessment.
+  // Build localized pricing context if country is provided
+  const currency = userCurrency || 'USD';
+  const currencySymbol = userCurrencySymbol || '$';
+  const localizedPricingContext = userCountry ? `
+LOCALIZED PRICING CONTEXT:
+The policyholder is located in ${userCountry}.
+- All repair cost estimates MUST be in ${currency} (${currencySymbol})
+- Format all prices with the ${currencySymbol} symbol
+- Use typical ${userCountry} market prices for repairs
+- Consider ${userCountry} labor rates for auto body repair
+- Use ${userCountry} parts pricing (both OEM and aftermarket)
+
+` : '';
+
+  // Build video quality context if metadata is provided
+  const videoQualityContext = videoQualityMetadata ? `
+VIDEO QUALITY METADATA:
+- Resolution: ${videoQualityMetadata.resolution}
+- Bitrate: ${videoQualityMetadata.bitrate} VBR
+- Focus: ${videoQualityMetadata.focusMode} autofocus
+- Total Duration: ${videoQualityMetadata.duration}s
+- Quality Footage: ${videoQualityMetadata.qualitySeconds}s of stable capture
+
+This is forensic-quality footage. Pay attention to fine details like small scratches,
+paint depth damage, rust nucleation points, and VIN/plate visibility.
+
+` : '';
+
+  const prompt = `${videoQualityContext}${localizedPricingContext}You are an expert auto damage assessor. Analyze this vehicle damage video and provide a structured assessment.
 
 ### DAMAGE AGE ANALYSIS (CRITICAL FOR FRAUD DETECTION)
 For each damaged area, assess whether the damage appears FRESH or OLD:

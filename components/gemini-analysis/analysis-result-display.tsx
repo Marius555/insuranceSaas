@@ -16,11 +16,12 @@ interface AnalysisResultDisplayProps {
   analysis: AutoDamageAnalysis | EnhancedAutoDamageAnalysis;
   securityWarnings?: string[];
   riskLevel?: 'low' | 'medium' | 'high';
-  claimId: string;
-  claimNumber: string;
+  reportId: string;
+  reportNumber: string;
   uploadedFiles?: File[];
   policyFile?: File | null;
   onReset?: () => void;
+  currencySymbol?: string;
 }
 
 function isEnhancedAnalysis(analysis: AutoDamageAnalysis | EnhancedAutoDamageAnalysis): analysis is EnhancedAutoDamageAnalysis {
@@ -31,11 +32,12 @@ export function AnalysisResultDisplay({
   analysis,
   securityWarnings = [],
   riskLevel = 'low',
-  claimId,
-  claimNumber,
+  reportId,
+  reportNumber,
   uploadedFiles = [],
   policyFile = null,
   onReset,
+  currencySymbol = '$',
 }: AnalysisResultDisplayProps) {
   const router = useRouter();
   const [showRawJSON, setShowRawJSON] = useState(false);
@@ -61,7 +63,7 @@ export function AnalysisResultDisplay({
     const url = URL.createObjectURL(dataBlob);
     const link = document.createElement('a');
     link.href = url;
-    link.download = `claim-analysis-${Date.now()}.json`;
+    link.download = `report-analysis-${Date.now()}.json`;
     link.click();
     URL.revokeObjectURL(url);
   };
@@ -73,7 +75,7 @@ export function AnalysisResultDisplay({
         <SecurityWarnings warnings={securityWarnings} riskLevel={riskLevel} />
       )}
 
-      {/* Claim Success Banner */}
+      {/* Report Success Banner */}
       <Alert className="border-green-500 bg-green-50 dark:bg-green-950">
         <div className="flex items-center gap-3">
           <svg className="h-5 w-5 text-green-600" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
@@ -81,7 +83,7 @@ export function AnalysisResultDisplay({
           </svg>
           <div className="flex-1">
             <AlertDescription className="text-green-800 dark:text-green-200">
-              <strong>Claim submitted successfully!</strong> Your claim number is <strong>{claimNumber}</strong>
+              <strong>Report submitted successfully!</strong> Your report number is <strong>{reportNumber}</strong>
             </AlertDescription>
           </div>
         </div>
@@ -440,7 +442,7 @@ export function AnalysisResultDisplay({
               <CardHeader>
                 <CardTitle>Financial Breakdown</CardTitle>
                 <CardDescription>
-                  Claim Status: <Badge>{analysis.claimAssessment.status.toUpperCase()}</Badge>
+                  Assessment Status: <Badge>{analysis.claimAssessment.status.toUpperCase()}</Badge>
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
@@ -448,26 +450,26 @@ export function AnalysisResultDisplay({
                   <div className="space-y-2">
                     <div className="flex justify-between">
                       <span className="text-muted-foreground">Total Repair Estimate:</span>
-                      <span className="font-semibold">${(analysis.claimAssessment.financialBreakdown.totalRepairEstimate ?? 0).toLocaleString()}</span>
+                      <span className="font-semibold">{currencySymbol}{(analysis.claimAssessment.financialBreakdown.totalRepairEstimate ?? 0).toLocaleString()}</span>
                     </div>
                     <div className="flex justify-between">
                       <span className="text-muted-foreground">Covered Amount:</span>
-                      <span>${(analysis.claimAssessment.financialBreakdown.coveredAmount ?? 0).toLocaleString()}</span>
+                      <span>{currencySymbol}{(analysis.claimAssessment.financialBreakdown.coveredAmount ?? 0).toLocaleString()}</span>
                     </div>
                     <div className="flex justify-between">
                       <span className="text-muted-foreground">Deductible:</span>
-                      <span>-${(analysis.claimAssessment.financialBreakdown.deductible ?? 0).toLocaleString()}</span>
+                      <span>-{currencySymbol}{(analysis.claimAssessment.financialBreakdown.deductible ?? 0).toLocaleString()}</span>
                     </div>
                     <div className="flex justify-between">
                       <span className="text-muted-foreground">Non-Covered:</span>
-                      <span>-${(analysis.claimAssessment.financialBreakdown.nonCoveredItems ?? 0).toLocaleString()}</span>
+                      <span>-{currencySymbol}{(analysis.claimAssessment.financialBreakdown.nonCoveredItems ?? 0).toLocaleString()}</span>
                     </div>
                   </div>
                   <div className="flex items-center justify-center">
                     <div className="text-center">
                       <p className="text-sm text-muted-foreground mb-1">Estimated Payout</p>
                       <p className="text-3xl font-bold text-primary">
-                        ${(analysis.claimAssessment.financialBreakdown.estimatedPayout ?? 0).toLocaleString()}
+                        {currencySymbol}{(analysis.claimAssessment.financialBreakdown.estimatedPayout ?? 0).toLocaleString()}
                       </p>
                     </div>
                   </div>
@@ -514,14 +516,14 @@ export function AnalysisResultDisplay({
       {/* Action Buttons */}
       <div className="flex gap-3 pt-2">
         <Button
-          onClick={() => router.push(`/auth/claims/${claimId}`)}
+          onClick={() => router.push(`/auth/reports/${reportId}`)}
           className="flex-1"
           size="lg"
         >
           <svg className="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z" />
           </svg>
-          View Full Claim Details
+          View Full Report Details
         </Button>
         {onReset && (
           <Button
@@ -532,7 +534,7 @@ export function AnalysisResultDisplay({
             <svg className="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0l3.181 3.183a8.25 8.25 0 0013.803-3.7M4.031 9.865a8.25 8.25 0 0113.803-3.7l3.181 3.182m0-4.991v4.99" />
             </svg>
-            Analyze Another Claim
+            Analyze Another Report
           </Button>
         )}
       </div>

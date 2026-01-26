@@ -10,6 +10,14 @@ import type {
   EnhancedAutoDamageAnalysis,
 } from "../types";
 
+export interface VideoQualityMetadata {
+  resolution: string;
+  bitrate: string;
+  focusMode: string;
+  duration: number;
+  qualitySeconds: number;
+}
+
 /**
  * Analyze car damage video WITH insurance policy document
  * Performs cross-reference reasoning to determine claim validity
@@ -18,11 +26,18 @@ import type {
  */
 export async function analyzeAutoDamageWithPolicy(
   videoPathOrBase64: string,
-  videoMimeType: 'video/mp4' | 'video/mov' | 'video/avi',
+  videoMimeType: 'video/mp4' | 'video/mov' | 'video/avi' | 'video/webm',
   policyPathOrBase64: string,
-  isBase64 = false
+  isBase64 = false,
+  userCountry?: string,
+  userCurrency?: string,
+  userCurrencySymbol?: string,
+  videoQualityMetadata?: VideoQualityMetadata
 ): Promise<GeminiResult<{ analysis: EnhancedAutoDamageAnalysis }>> {
   try {
+    // Normalize MIME type: strip codec suffix (e.g., "video/webm;codecs=vp8" -> "video/webm")
+    const normalizedMimeType = videoMimeType.split(';')[0].trim() as typeof videoMimeType;
+
     // Get video data
     let videoBase64: string;
     if (isBase64) {
@@ -52,7 +67,34 @@ You MUST produce identical outputs for identical inputs. Follow these rules:
 5. Be deterministic in your reasoning process
 `;
 
-    const prompt = `${CONSISTENCY_INSTRUCTION}
+    // Build localized pricing context if country is provided
+    const currency = userCurrency || 'USD';
+    const currencySymbol = userCurrencySymbol || '$';
+    const LOCALIZED_PRICING_CONTEXT = userCountry ? `
+LOCALIZED PRICING CONTEXT:
+The policyholder is located in ${userCountry}.
+- All repair cost estimates MUST be in ${currency} (${currencySymbol})
+- Format all prices with the ${currencySymbol} symbol
+- Use typical ${userCountry} market prices for repairs
+- Consider ${userCountry} labor rates for auto body repair
+- Use ${userCountry} parts pricing (both OEM and aftermarket)
+- Factor in ${userCountry} regional cost variations if applicable
+` : '';
+
+    // Build video quality context if metadata is provided
+    const VIDEO_QUALITY_CONTEXT = videoQualityMetadata ? `
+VIDEO QUALITY METADATA:
+- Resolution: ${videoQualityMetadata.resolution}
+- Bitrate: ${videoQualityMetadata.bitrate} VBR
+- Focus: ${videoQualityMetadata.focusMode} autofocus
+- Total Duration: ${videoQualityMetadata.duration}s
+- Quality Footage: ${videoQualityMetadata.qualitySeconds}s of stable capture
+
+This is forensic-quality footage. Pay attention to fine details like small scratches,
+paint depth damage, rust nucleation points, and VIN/plate visibility.
+` : '';
+
+    const prompt = `${CONSISTENCY_INSTRUCTION}${VIDEO_QUALITY_CONTEXT}${LOCALIZED_PRICING_CONTEXT}
 
 ═══════════════════════════════════════════════════════════════════
 CRITICAL ANTI-HALLUCINATION INSTRUCTION - READ FIRST
@@ -502,7 +544,7 @@ IMPORTANT: Do NOT convert insurance terms to numbers. Return them as strings exa
               { text: prompt },
               {
                 inlineData: {
-                  mimeType: videoMimeType,
+                  mimeType: normalizedMimeType,
                   data: videoBase64,
                 },
               },

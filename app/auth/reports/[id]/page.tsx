@@ -1,12 +1,12 @@
 import { notFound, redirect } from 'next/navigation';
 import { getSession } from '@/appwrite/getSession';
-import { getClaimById } from '@/appwrite/getClaim';
+import { getReportById } from '@/appwrite/getReport';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { CurrencyAmount } from '@/components/ui/currency-amount';
 import { HugeiconsIcon } from '@hugeicons/react';
 import { Image01Icon, File01Icon } from '@hugeicons/core-free-icons';
-import { ClaimActions } from './claim-actions';
-import { AppSidebar } from "@/components/dashboardComponents/app-sidebar";
+import { ReportActions } from './report-actions';
 import {
   Breadcrumb,
   BreadcrumbItem,
@@ -18,32 +18,31 @@ import {
 import { Separator } from "@/components/ui/separator";
 import {
   SidebarInset,
-  SidebarProvider,
   SidebarTrigger,
 } from "@/components/ui/sidebar";
 
-interface ClaimPageProps {
+interface ReportPageProps {
   params: Promise<{ id: string }>;
 }
 
-export default async function ClaimPage({ params }: ClaimPageProps) {
+export default async function ReportPage({ params }: ReportPageProps) {
   const { id } = await params;
 
   const session = await getSession();
   if (!session) {
-    redirect(`/?auth=required&returnTo=/auth/claims/${id}`);
+    redirect(`/?auth=required&returnTo=/auth/reports/${id}`);
   }
 
-  const claimResult = await getClaimById(id);
+  const reportResult = await getReportById(id);
 
-  if (!claimResult.success || !claimResult.data) {
+  if (!reportResult.success || !reportResult.data) {
     notFound();
   }
 
-  const { claim, damageDetails, vehicleVerification, assessment, mediaFiles, policyFile } = claimResult.data;
+  const { report, damageDetails, vehicleVerification, assessment, mediaFiles, policyFile } = reportResult.data;
 
-  const isOwner = claim.user_id === session.id;
-  const isPublic = claim.is_public;
+  const isOwner = report.user_id === session.id;
+  const isPublic = report.is_public;
 
   if (!isOwner && !isPublic) {
     redirect('/?error=unauthorized');
@@ -95,9 +94,7 @@ export default async function ClaimPage({ params }: ClaimPageProps) {
   };
 
   return (
-    <SidebarProvider>
-      <AppSidebar userId={session.id} />
-      <SidebarInset>
+    <SidebarInset>
         <header className="flex h-16 shrink-0 items-center gap-2">
           <div className="flex items-center gap-2 px-4">
             <SidebarTrigger className="-ml-1" />
@@ -114,13 +111,13 @@ export default async function ClaimPage({ params }: ClaimPageProps) {
                 </BreadcrumbItem>
                 <BreadcrumbSeparator className="hidden md:block" />
                 <BreadcrumbItem className="hidden md:block">
-                  <BreadcrumbLink href={`/auth/dashboard/${session.id}/claims`}>
-                    Claims
+                  <BreadcrumbLink href={`/auth/dashboard/${session.id}/reports`}>
+                    Reports
                   </BreadcrumbLink>
                 </BreadcrumbItem>
                 <BreadcrumbSeparator className="hidden md:block" />
                 <BreadcrumbItem>
-                  <BreadcrumbPage>{claim.claim_number}</BreadcrumbPage>
+                  <BreadcrumbPage>{report.claim_number}</BreadcrumbPage>
                 </BreadcrumbItem>
               </BreadcrumbList>
             </Breadcrumb>
@@ -128,12 +125,14 @@ export default async function ClaimPage({ params }: ClaimPageProps) {
         </header>
 
         <div className="flex flex-1 flex-col gap-4 p-4 pt-0">
-          {/* Claim Header */}
+          {/* Report Header */}
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-            <div className="flex items-center gap-3">
-              <h1 className="text-xl sm:text-2xl font-bold text-foreground">{claim.claim_number}</h1>
-              <span className="text-sm text-muted-foreground">
-                {new Date(claim.analysis_timestamp).toLocaleDateString()}
+            <div className="flex items-center gap-3 min-w-0">
+              <h1 className="text-xl sm:text-2xl font-bold text-foreground truncate min-w-0">
+                {report.claim_number}
+              </h1>
+              <span className="text-sm text-muted-foreground whitespace-nowrap flex-shrink-0">
+                {new Date(report.analysis_timestamp).toLocaleDateString()}
               </span>
             </div>
 
@@ -166,19 +165,19 @@ export default async function ClaimPage({ params }: ClaimPageProps) {
                 </a>
               )}
 
-              <ClaimActions
-                claimData={{
-                  claim: claim as unknown as Record<string, unknown>,
+              <ReportActions
+                reportData={{
+                  report: report as unknown as Record<string, unknown>,
                   damageDetails: damageDetails as unknown as Record<string, unknown>[],
                   vehicleVerification: vehicleVerification as unknown as Record<string, unknown> | null,
                   assessment: assessment as unknown as Record<string, unknown> | null,
-                  claimNumber: claim.claim_number,
+                  reportNumber: report.claim_number,
                 }}
               />
 
-              {claim.claim_status && claim.claim_status !== 'pending' && (
-                <Badge className={getStatusColor(claim.claim_status)}>
-                  {claim.claim_status}
+              {report.claim_status && report.claim_status !== 'pending' && (
+                <Badge className={getStatusColor(report.claim_status)}>
+                  {report.claim_status}
                 </Badge>
               )}
             </div>
@@ -186,37 +185,37 @@ export default async function ClaimPage({ params }: ClaimPageProps) {
 
           {/* Unified Table */}
           <div className="bg-card rounded-lg border border-border overflow-hidden">
-            {/* Claim Overview Section */}
+            {/* Report Overview Section */}
             <div className="bg-muted px-4 py-2 border-b border-border">
               <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">
-                Claim Overview
+                Report Overview
               </h2>
             </div>
             <div className="divide-y divide-border">
               <div className="flex justify-between items-center px-4 py-3">
                 <span className="text-sm text-muted-foreground">Damage Type</span>
-                <span className="text-sm font-medium text-foreground capitalize">{claim.damage_type}</span>
+                <span className="text-sm font-medium text-foreground capitalize">{report.damage_type}</span>
               </div>
               <div className="flex justify-between items-center px-4 py-3">
                 <span className="text-sm text-muted-foreground">Overall Severity</span>
-                <Badge className={getSeverityColor(claim.overall_severity)}>
-                  {claim.overall_severity}
+                <Badge className={getSeverityColor(report.overall_severity)}>
+                  {report.overall_severity}
                 </Badge>
               </div>
               <div className="flex justify-between items-center px-4 py-3">
                 <span className="text-sm text-muted-foreground">Confidence Score</span>
                 <span className="text-sm font-medium text-foreground">
-                  {(claim.confidence_score * 100).toFixed(0)}%
+                  {(report.confidence_score * 100).toFixed(0)}%
                 </span>
               </div>
-              {claim.investigation_needed && (
+              {report.investigation_needed && (
                 <div className="px-4 py-3">
                   <div className="flex justify-between items-center">
                     <span className="text-sm text-muted-foreground">Investigation</span>
                     <Badge className="bg-orange-100 text-orange-800 dark:bg-orange-900/50 dark:text-orange-300">Required</Badge>
                   </div>
-                  {claim.investigation_reason && (
-                    <p className="text-xs text-muted-foreground mt-2">{claim.investigation_reason}</p>
+                  {report.investigation_reason && (
+                    <p className="text-xs text-muted-foreground mt-2">{report.investigation_reason}</p>
                   )}
                 </div>
               )}
@@ -233,27 +232,19 @@ export default async function ClaimPage({ params }: ClaimPageProps) {
                 <div className="divide-y divide-border">
                   <div className="flex justify-between items-center px-4 py-3">
                     <span className="text-sm text-muted-foreground">Total Estimate</span>
-                    <span className="text-sm font-medium text-foreground">
-                      ${assessment.total_repair_estimate.toLocaleString()}
-                    </span>
+                    <CurrencyAmount amount={assessment.total_repair_estimate} className="text-sm font-medium text-foreground" />
                   </div>
                   <div className="flex justify-between items-center px-4 py-3">
                     <span className="text-sm text-muted-foreground">Covered Amount</span>
-                    <span className="text-sm font-medium text-foreground">
-                      ${assessment.covered_amount.toLocaleString()}
-                    </span>
+                    <CurrencyAmount amount={assessment.covered_amount} className="text-sm font-medium text-foreground" />
                   </div>
                   <div className="flex justify-between items-center px-4 py-3">
                     <span className="text-sm text-muted-foreground">Deductible</span>
-                    <span className="text-sm font-medium text-foreground">
-                      ${assessment.deductible.toLocaleString()}
-                    </span>
+                    <CurrencyAmount amount={assessment.deductible} className="text-sm font-medium text-foreground" />
                   </div>
                   <div className="flex justify-between items-center px-4 py-3 bg-green-50 dark:bg-green-950/30">
                     <span className="text-sm font-semibold text-foreground">Estimated Payout</span>
-                    <span className="text-sm font-bold text-green-600 dark:text-green-400">
-                      ${assessment.estimated_payout.toLocaleString()}
-                    </span>
+                    <CurrencyAmount amount={assessment.estimated_payout} className="text-sm font-bold text-green-600 dark:text-green-400" />
                   </div>
                 </div>
               </>
@@ -318,55 +309,72 @@ export default async function ClaimPage({ params }: ClaimPageProps) {
                   </table>
                 </div>
 
-                {/* Mobile: Stacked layout */}
-                <div className="md:hidden divide-y divide-border">
-                  <div className="flex justify-between items-center px-4 py-2">
-                    <span className="text-sm text-muted-foreground">License Plate (Media)</span>
-                    <span className="text-sm font-medium text-foreground">{vehicleVerification.video_license_plate || '—'}</span>
+                {/* Mobile: Grouped by source */}
+                <div className="md:hidden">
+                  {/* From Media Section */}
+                  <div className="bg-muted/30 px-4 py-2 border-b border-border">
+                    <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
+                      From Media
+                    </span>
                   </div>
-                  <div className="flex justify-between items-center px-4 py-2">
-                    <span className="text-sm text-muted-foreground">License Plate (Policy)</span>
-                    <span className="text-sm font-medium text-foreground">{vehicleVerification.policy_license_plate || '—'}</span>
+                  <div className="divide-y divide-border">
+                    <div className="flex justify-between items-center px-4 py-2">
+                      <span className="text-sm text-muted-foreground">License Plate</span>
+                      <span className="text-sm font-medium text-foreground">{vehicleVerification.video_license_plate || '—'}</span>
+                    </div>
+                    <div className="flex justify-between items-center px-4 py-2">
+                      <span className="text-sm text-muted-foreground">VIN</span>
+                      <span className="text-sm font-medium text-foreground">{vehicleVerification.video_vin || '—'}</span>
+                    </div>
+                    <div className="flex justify-between items-center px-4 py-2">
+                      <span className="text-sm text-muted-foreground">Make</span>
+                      <span className="text-sm font-medium text-foreground">{vehicleVerification.video_make || '—'}</span>
+                    </div>
+                    <div className="flex justify-between items-center px-4 py-2">
+                      <span className="text-sm text-muted-foreground">Model</span>
+                      <span className="text-sm font-medium text-foreground">{vehicleVerification.video_model || '—'}</span>
+                    </div>
+                    <div className="flex justify-between items-center px-4 py-2">
+                      <span className="text-sm text-muted-foreground">Year</span>
+                      <span className="text-sm font-medium text-foreground">{vehicleVerification.video_year || '—'}</span>
+                    </div>
+                    <div className="flex justify-between items-center px-4 py-2">
+                      <span className="text-sm text-muted-foreground">Color</span>
+                      <span className="text-sm font-medium text-foreground">{vehicleVerification.video_color || '—'}</span>
+                    </div>
                   </div>
-                  <div className="flex justify-between items-center px-4 py-2">
-                    <span className="text-sm text-muted-foreground">VIN (Media)</span>
-                    <span className="text-sm font-medium text-foreground">{vehicleVerification.video_vin || '—'}</span>
+
+                  {/* From Policy Section */}
+                  <div className="bg-muted/30 px-4 py-2 border-y border-border mt-2">
+                    <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
+                      From Policy
+                    </span>
                   </div>
-                  <div className="flex justify-between items-center px-4 py-2">
-                    <span className="text-sm text-muted-foreground">VIN (Policy)</span>
-                    <span className="text-sm font-medium text-foreground">{vehicleVerification.policy_vin || '—'}</span>
-                  </div>
-                  <div className="flex justify-between items-center px-4 py-2">
-                    <span className="text-sm text-muted-foreground">Make (Media)</span>
-                    <span className="text-sm font-medium text-foreground">{vehicleVerification.video_make || '—'}</span>
-                  </div>
-                  <div className="flex justify-between items-center px-4 py-2">
-                    <span className="text-sm text-muted-foreground">Make (Policy)</span>
-                    <span className="text-sm font-medium text-foreground">{vehicleVerification.policy_make || '—'}</span>
-                  </div>
-                  <div className="flex justify-between items-center px-4 py-2">
-                    <span className="text-sm text-muted-foreground">Model (Media)</span>
-                    <span className="text-sm font-medium text-foreground">{vehicleVerification.video_model || '—'}</span>
-                  </div>
-                  <div className="flex justify-between items-center px-4 py-2">
-                    <span className="text-sm text-muted-foreground">Model (Policy)</span>
-                    <span className="text-sm font-medium text-foreground">{vehicleVerification.policy_model || '—'}</span>
-                  </div>
-                  <div className="flex justify-between items-center px-4 py-2">
-                    <span className="text-sm text-muted-foreground">Year (Media)</span>
-                    <span className="text-sm font-medium text-foreground">{vehicleVerification.video_year || '—'}</span>
-                  </div>
-                  <div className="flex justify-between items-center px-4 py-2">
-                    <span className="text-sm text-muted-foreground">Year (Policy)</span>
-                    <span className="text-sm font-medium text-foreground">{vehicleVerification.policy_year || '—'}</span>
-                  </div>
-                  <div className="flex justify-between items-center px-4 py-2">
-                    <span className="text-sm text-muted-foreground">Color (Media)</span>
-                    <span className="text-sm font-medium text-foreground">{vehicleVerification.video_color || '—'}</span>
-                  </div>
-                  <div className="flex justify-between items-center px-4 py-2">
-                    <span className="text-sm text-muted-foreground">Color (Policy)</span>
-                    <span className="text-sm font-medium text-foreground">{vehicleVerification.policy_color || '—'}</span>
+                  <div className="divide-y divide-border">
+                    <div className="flex justify-between items-center px-4 py-2">
+                      <span className="text-sm text-muted-foreground">License Plate</span>
+                      <span className="text-sm font-medium text-foreground">{vehicleVerification.policy_license_plate || '—'}</span>
+                    </div>
+                    <div className="flex justify-between items-center px-4 py-2">
+                      <span className="text-sm text-muted-foreground">VIN</span>
+                      <span className="text-sm font-medium text-foreground">{vehicleVerification.policy_vin || '—'}</span>
+                    </div>
+                    <div className="flex justify-between items-center px-4 py-2">
+                      <span className="text-sm text-muted-foreground">Make</span>
+                      <span className="text-sm font-medium text-foreground">{vehicleVerification.policy_make || '—'}</span>
+                    </div>
+                    <div className="flex justify-between items-center px-4 py-2">
+                      <span className="text-sm text-muted-foreground">Model</span>
+                      <span className="text-sm font-medium text-foreground">{vehicleVerification.policy_model || '—'}</span>
+                    </div>
+                    <div className="flex justify-between items-center px-4 py-2">
+                      <span className="text-sm text-muted-foreground">Year</span>
+                      <span className="text-sm font-medium text-foreground">{vehicleVerification.policy_year || '—'}</span>
+                    </div>
+                    <div className="flex justify-between items-center px-4 py-2">
+                      <span className="text-sm text-muted-foreground">Color</span>
+                      <span className="text-sm font-medium text-foreground">{vehicleVerification.policy_color || '—'}</span>
+                    </div>
                   </div>
                 </div>
 
@@ -423,7 +431,6 @@ export default async function ClaimPage({ params }: ClaimPageProps) {
             )}
           </div>
         </div>
-      </SidebarInset>
-    </SidebarProvider>
+    </SidebarInset>
   );
 }

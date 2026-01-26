@@ -4,11 +4,12 @@ import { useState } from "react";
 import { FileUploadZone } from "@/components/gemini-analysis/file-upload-zone";
 import { MediaPreview } from "@/components/gemini-analysis/media-preview";
 import { ProgressIndicator } from "@/components/gemini-analysis/progress-indicator";
-import { submitClaimAction } from "@/appwrite/submitClaimAction";
+import { submitReportAction } from "@/appwrite/submitReportAction";
 import { Button } from "@/components/ui/button";
+import { getUserLocation } from "@/lib/utils/country-detection";
 
 interface QuickAnalysisTabContentProps {
-  onSuccess: (claimId: string) => void;
+  onSuccess: (reportId: string) => void;
 }
 
 export function QuickAnalysisTabContent({ onSuccess }: QuickAnalysisTabContentProps) {
@@ -59,6 +60,12 @@ export function QuickAnalysisTabContent({ onSuccess }: QuickAnalysisTabContentPr
       });
       sortedFiles.forEach(file => formData.append('mediaFiles', file));
 
+      // Add user's location for localized pricing
+      const location = getUserLocation();
+      formData.append('userCountry', location.country);
+      formData.append('userCurrency', location.currency);
+      formData.append('userCurrencySymbol', location.currencySymbol);
+
       await new Promise(resolve => setTimeout(resolve, 500));
       setCurrentStep(3);
 
@@ -67,13 +74,13 @@ export function QuickAnalysisTabContent({ onSuccess }: QuickAnalysisTabContentPr
       setCurrentStep(4);
 
       // Step 4: AI Analysis & Steps 5-6 (handled by server)
-      const result = await submitClaimAction(formData);
+      const result = await submitReportAction(formData);
 
-      if (result.success && result.claimId) {
+      if (result.success && result.reportId) {
         setCurrentStep(6);
         setSuccess(true);
         // Call immediately - no delay, let modal stay open during navigation
-        onSuccess(result.claimId!);
+        onSuccess(result.reportId!);
       } else {
         setError(result.message || "Analysis failed. Please try again.");
         setIsAnalyzing(false);
@@ -97,28 +104,30 @@ export function QuickAnalysisTabContent({ onSuccess }: QuickAnalysisTabContentPr
     <div className="space-y-6">
       {!isAnalyzing && !success && (
         <>
-          {files.length === 0 ? (
-            <FileUploadZone
-              accept="image/*,video/*"
-              maxSize={20 * 1024 * 1024}
-              multiple={true}
-              maxFiles={5}
-              onFilesSelected={handleFilesSelected}
-              disabled={isAnalyzing}
-              label="Upload Images or Video"
-            />
-          ) : (
-            <MediaPreview
-              files={files}
-              onRemove={handleRemoveFile}
-              mediaType={mediaType!}
-              displayMode="compact"
-            />
-          )}
+          <div className="space-y-2">
+            <label className="block text-sm font-medium">Upload Images or Video</label>
+            {files.length === 0 ? (
+              <FileUploadZone
+                accept="image/*,video/*"
+                maxSize={20 * 1024 * 1024}
+                multiple={true}
+                maxFiles={5}
+                onFilesSelected={handleFilesSelected}
+                disabled={isAnalyzing}
+              />
+            ) : (
+              <MediaPreview
+                files={files}
+                onRemove={handleRemoveFile}
+                mediaType={mediaType!}
+                displayMode="compact"
+              />
+            )}
+          </div>
 
           {files.length > 0 && (
             <Button onClick={handleAnalyze} className="w-full" size="lg">
-              Analyze & Submit Claim
+              Analyze & Submit Report
             </Button>
           )}
         </>
@@ -137,10 +146,10 @@ export function QuickAnalysisTabContent({ onSuccess }: QuickAnalysisTabContentPr
       {success && (
         <div className="text-center py-12">
           <div className="text-green-600 text-xl font-semibold mb-2">
-            ✓ Claim Submitted Successfully!
+            ✓ Report Submitted Successfully!
           </div>
           <p className="text-muted-foreground">
-            Redirecting to your claim...
+            Redirecting to your report...
           </p>
         </div>
       )}

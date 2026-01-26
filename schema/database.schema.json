@@ -1,5 +1,5 @@
 {
-  "version": "3.1.0",
+  "version": "3.2.0",
   "description": "Car Insurance Damage Assessment Platform - Database Schema",
   "database": {
     "id": "${DATABASE_ID}",
@@ -905,6 +905,69 @@
           "key": "resource_lookup",
           "type": "key",
           "attributes": ["resource_type", "resource_id"]
+        }
+      ]
+    },
+    {
+      "id": "feedback",
+      "name": "feedback",
+      "documentSecurity": true,
+      "permissions": [],
+      "attributes": [
+        {
+          "key": "user_id",
+          "type": "string",
+          "size": 36,
+          "required": true
+        },
+        {
+          "key": "category",
+          "type": "enum",
+          "elements": ["bug_report", "feature_request", "general", "complaint"],
+          "required": true
+        },
+        {
+          "key": "rating",
+          "type": "integer",
+          "required": true,
+          "min": 1,
+          "max": 5
+        },
+        {
+          "key": "feedback_text",
+          "type": "string",
+          "size": 2000,
+          "required": true
+        },
+        {
+          "key": "status",
+          "type": "enum",
+          "elements": ["pending_review", "reviewed", "addressed"],
+          "required": false,
+          "default": "pending_review"
+        }
+      ],
+      "indexes": [
+        {
+          "key": "user_id_index",
+          "type": "key",
+          "attributes": ["user_id"]
+        },
+        {
+          "key": "category_index",
+          "type": "key",
+          "attributes": ["category"]
+        },
+        {
+          "key": "status_index",
+          "type": "key",
+          "attributes": ["status"]
+        },
+        {
+          "key": "created_at_index",
+          "type": "key",
+          "attributes": ["$createdAt"],
+          "orders": ["DESC"]
         }
       ]
     }

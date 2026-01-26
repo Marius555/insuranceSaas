@@ -86,7 +86,7 @@ export interface GenerateTextOutput {
 // Multimodal Input Types
 // ========================================
 
-export type VideoMimeType = 'video/mp4' | 'video/mov' | 'video/avi' | 'video/mpeg';
+export type VideoMimeType = 'video/mp4' | 'video/mov' | 'video/avi' | 'video/mpeg' | 'video/webm';
 export type AudioMimeType = 'audio/mp3' | 'audio/wav' | 'audio/aac' | 'audio/ogg';
 export type ImageMimeType = 'image/jpeg' | 'image/png' | 'image/gif' | 'image/webp';
 export type DocumentMimeType = 'application/pdf';

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback, useEffect } from "react";
+import { useState, useCallback, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import {
   Dialog,
@@ -9,50 +9,70 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
+import {
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+  SheetTrigger,
+} from "@/components/ui/sheet";
+import { useIsMobile } from "@/hooks/use-is-mobile";
 import { Button } from "@/components/ui/button";
 import { useCamera } from "@/hooks/use-camera";
 import { useVideoRecorder } from "@/hooks/use-video-recorder";
+import { useMotionDetection } from "@/hooks/use-motion-detection";
 import { RecordingControls } from "./recording-controls";
 import { RecordingPreview } from "./recording-preview";
-import { PolicyUploadStep } from "./policy-upload-step";
+import { PolicyUploadStep, type PolicySubmission } from "./policy-upload-step";
+import { GhostFrameOverlay } from "./ghost-frame-overlay";
+import { SpeedAlert } from "./speed-alert";
 import { ProgressIndicator } from "@/components/gemini-analysis/progress-indicator";
 import {
   compressVideoIfNeeded,
   needsCompression,
 } from "@/lib/utils/video-compression";
-import { submitClaimAction } from "@/appwrite/submitClaimAction";
+import { submitReportAction } from "@/appwrite/submitReportAction";
 import { Camera02Icon, CameraOff02Icon } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
+import { getCountryFromTimezone } from "@/lib/utils/country-detection";
 
 type ModalState =
   | "permission-prompt"
   | "permission-denied"
   | "ready"
   | "recording"
+  | "processing" // After stop, before preview - bridges the async gap
   | "compressing"
   | "preview"
   | "policy-step"
   | "uploading";
 
 interface VideoRecorderModalProps {
-  userId: string;
   children: React.ReactNode;
-  onSuccess?: (claimId: string) => void;
+  onSuccess?: (reportId: string) => void;
 }
 
-const MAX_DURATION_SECONDS = 20;
+const MAX_DURATION_SECONDS = 45;
 
 export function VideoRecorderModal({
   children,
   onSuccess,
 }: VideoRecorderModalProps) {
   const router = useRouter();
+  const isMobile = useIsMobile();
   const [open, setOpen] = useState(false);
   const [modalState, setModalState] = useState<ModalState>("permission-prompt");
+
+  // Lock modal type once when modal opens - use ref to prevent re-renders and mid-session changes
+  const lockedIsMobileRef = useRef<boolean | null>(null);
   const [processedFile, setProcessedFile] = useState<File | null>(null);
   const [wasCompressed, setWasCompressed] = useState(false);
   const [uploadStep, setUploadStep] = useState(1);
   const [error, setError] = useState<string | null>(null);
+  const [qualitySeconds, setQualitySeconds] = useState(0);
+
+  // Track last duration for quality seconds calculation
+  const lastDurationRef = useRef(0);
 
   const {
     stream,
@@ -60,9 +80,16 @@ export function VideoRecorderModal({
     error: cameraError,
     permissionState,
     isLoading: cameraLoading,
+    cameraSettings,
     requestPermission,
     stopCamera,
   } = useCamera({ preferBackCamera: true });
+
+  // Motion detection for quality tracking
+  const {
+    isMovingTooFast,
+    requestPermission: requestMotionPermission,
+  } = useMotionDetection({ enabled: modalState === "recording" });
 
   const {
     isRecording,
@@ -80,6 +107,23 @@ export function VideoRecorderModal({
       // Recording auto-stopped, transition to processing
     },
   });
+
+  // Lock modal type ONCE when modal opens - prevents Dialog/Sheet switching mid-process
+  // Using ref ensures the value is locked on first open and won't change even if isMobile changes
+  useEffect(() => {
+    if (open && lockedIsMobileRef.current === null) {
+      // Lock on first open only
+      lockedIsMobileRef.current = isMobile;
+    } else if (!open) {
+      // Reset when closed
+      lockedIsMobileRef.current = null;
+    }
+  }, [open, isMobile]);
+
+  // Use locked value when modal is open to prevent layout switching
+  const useSheetLayout = open
+    ? (lockedIsMobileRef.current ?? isMobile)
+    : isMobile;
 
   // Handle permission state changes
   useEffect(() => {
@@ -104,9 +148,30 @@ export function VideoRecorderModal({
   // Handle recording stop - process video
   useEffect(() => {
     if (!isRecording && recordedFile && modalState === "recording") {
+      // Immediately protect modal during processing transition
+      setModalState("processing");
       processRecordedVideo(recordedFile);
     }
   }, [isRecording, recordedFile, modalState]);
+
+  // Track quality seconds (only counts when not moving too fast)
+  useEffect(() => {
+    if (isRecording && duration > lastDurationRef.current) {
+      const elapsed = duration - lastDurationRef.current;
+      if (!isMovingTooFast) {
+        setQualitySeconds((prev) => prev + elapsed);
+      }
+    }
+    lastDurationRef.current = duration;
+  }, [isRecording, duration, isMovingTooFast]);
+
+  // Reset quality tracking when recording starts
+  useEffect(() => {
+    if (isRecording && duration === 0) {
+      setQualitySeconds(0);
+      lastDurationRef.current = 0;
+    }
+  }, [isRecording, duration]);
 
   const processRecordedVideo = async (file: File) => {
     if (needsCompression(file)) {
@@ -124,8 +189,29 @@ export function VideoRecorderModal({
     setModalState("preview");
   };
 
+  // Check if modal is in an active state that shouldn't be interrupted
+  // Includes preview/policy-step because user has recorded video they want to keep
+  const isActiveState =
+    modalState === "recording" ||
+    modalState === "processing" ||
+    modalState === "compressing" ||
+    modalState === "preview" ||
+    modalState === "policy-step" ||
+    modalState === "uploading" ||
+    cameraLoading;
+
+  // Use ref to avoid stale closure in handleOpenChange
+  const isActiveStateRef = useRef(false);
+  isActiveStateRef.current = isActiveState;
+
   const handleOpenChange = useCallback(
     (isOpen: boolean) => {
+      // Prevent closing during recording, compressing, uploading, or camera loading
+      // Use ref to get current value and avoid stale closure
+      if (!isOpen && isActiveStateRef.current) {
+        return;
+      }
+
       setOpen(isOpen);
       if (!isOpen) {
         // Cleanup on close
@@ -136,6 +222,8 @@ export function VideoRecorderModal({
         setWasCompressed(false);
         setUploadStep(1);
         setError(null);
+        setQualitySeconds(0);
+        lastDurationRef.current = 0;
       }
     },
     [stopCamera, resetRecording]
@@ -148,8 +236,10 @@ export function VideoRecorderModal({
     }
   };
 
-  const handleStartRecording = () => {
+  const handleStartRecording = async () => {
     setError(null);
+    // Request motion permission for iOS
+    await requestMotionPermission();
     startRecording();
     setModalState("recording");
   };
@@ -166,6 +256,8 @@ export function VideoRecorderModal({
       setProcessedFile(null);
       setWasCompressed(false);
       setError(null);
+      setQualitySeconds(0);
+      lastDurationRef.current = 0;
       setModalState("ready");
     } else {
       // Close modal
@@ -174,7 +266,31 @@ export function VideoRecorderModal({
   };
 
   const handleSubmitQuick = async () => {
-    if (!processedFile) return;
+    if (!processedFile) {
+      console.error('[VideoRecorder] No processed file to submit');
+      return;
+    }
+
+    console.log('[VideoRecorder] Starting submission:', {
+      fileName: processedFile.name,
+      fileSize: processedFile.size,
+      fileType: processedFile.type,
+    });
+
+    // Verify file is readable before submission (mobile browsers can have issues)
+    try {
+      const testBuffer = await processedFile.slice(0, 1024).arrayBuffer();
+      if (!testBuffer || testBuffer.byteLength === 0) {
+        console.error('[VideoRecorder] File appears empty or corrupt');
+        setError("Video file appears to be empty or corrupt. Please record again.");
+        return;
+      }
+      console.log('[VideoRecorder] File verification passed');
+    } catch (e) {
+      console.error('[VideoRecorder] Unable to read file:', e);
+      setError("Unable to read video file. Please record again.");
+      return;
+    }
 
     setModalState("uploading");
     setUploadStep(1);
@@ -182,6 +298,21 @@ export function VideoRecorderModal({
     try {
       const formData = new FormData();
       formData.append("mediaFiles", processedFile);
+
+      // Add user's country for localized pricing
+      const userCountry = getCountryFromTimezone();
+      formData.append('userCountry', userCountry);
+
+      // Add video quality metadata for Gemini analysis
+      if (cameraSettings) {
+        formData.append('videoQualityMetadata', JSON.stringify({
+          resolution: cameraSettings.resolution,
+          bitrate: '8 Mbps',
+          focusMode: cameraSettings.focusMode,
+          duration: duration,
+          qualitySeconds: qualitySeconds,
+        }));
+      }
 
       // Simulate progress steps
       setUploadStep(2); // Uploading
@@ -191,23 +322,28 @@ export function VideoRecorderModal({
       await new Promise((r) => setTimeout(r, 300));
 
       setUploadStep(4); // Analyzing
-      const result = await submitClaimAction(formData);
+      console.log('[VideoRecorder] Calling submitReportAction...');
+      const result = await submitReportAction(formData);
+      console.log('[VideoRecorder] Submission result:', result);
 
-      if (result.success && result.claimId) {
+      if (result.success && result.reportId) {
         setUploadStep(5); // Saving
         await new Promise((r) => setTimeout(r, 300));
 
         setUploadStep(6); // Complete
         await new Promise((r) => setTimeout(r, 500));
 
-        onSuccess?.(result.claimId);
-        handleOpenChange(false);
-        router.push(`/auth/claims/${result.claimId}`);
+        onSuccess?.(result.reportId);
+        // Navigate first - use replace for more reliable navigation
+        // The page change will unmount the modal
+        router.replace(`/auth/reports/${result.reportId}`);
       } else {
-        setError(result.message || "Failed to submit claim");
+        console.error('[VideoRecorder] Submission failed:', result.message);
+        setError(result.message || "Failed to submit report");
         setModalState("preview");
       }
     } catch (err) {
+      console.error('[VideoRecorder] Submission error:', err);
       setError(err instanceof Error ? err.message : "Submission failed");
       setModalState("preview");
     }
@@ -217,8 +353,36 @@ export function VideoRecorderModal({
     setModalState("policy-step");
   };
 
-  const handleSubmitWithPolicy = async (policyFile: File) => {
-    if (!processedFile) return;
+  const handleSubmitWithPolicy = async (policySubmission: PolicySubmission) => {
+    if (!processedFile) {
+      console.error('[VideoRecorder] No processed file to submit');
+      return;
+    }
+
+    const isNewFile = policySubmission.type === 'file';
+    console.log('[VideoRecorder] Starting submission with policy:', {
+      videoFileName: processedFile.name,
+      videoFileSize: processedFile.size,
+      policyType: policySubmission.type,
+      ...(isNewFile
+        ? { policyFileName: policySubmission.file.name, policyFileSize: policySubmission.file.size }
+        : { existingPolicyId: policySubmission.policy.fileId }),
+    });
+
+    // Verify video file is readable
+    try {
+      const testBuffer = await processedFile.slice(0, 1024).arrayBuffer();
+      if (!testBuffer || testBuffer.byteLength === 0) {
+        console.error('[VideoRecorder] Video file appears empty or corrupt');
+        setError("Video file appears to be empty or corrupt. Please record again.");
+        return;
+      }
+      console.log('[VideoRecorder] Video file verification passed');
+    } catch (e) {
+      console.error('[VideoRecorder] Unable to read video file:', e);
+      setError("Unable to read video file. Please record again.");
+      return;
+    }
 
     setModalState("uploading");
     setUploadStep(1);
@@ -226,7 +390,28 @@ export function VideoRecorderModal({
     try {
       const formData = new FormData();
       formData.append("mediaFiles", processedFile);
-      formData.append("policyFile", policyFile);
+
+      // Add policy - either new file or existing file ID
+      if (policySubmission.type === 'file') {
+        formData.append("policyFile", policySubmission.file);
+      } else {
+        formData.append("existingPolicyFileId", policySubmission.policy.fileId);
+      }
+
+      // Add user's country for localized pricing
+      const userCountry = getCountryFromTimezone();
+      formData.append('userCountry', userCountry);
+
+      // Add video quality metadata for Gemini analysis
+      if (cameraSettings) {
+        formData.append('videoQualityMetadata', JSON.stringify({
+          resolution: cameraSettings.resolution,
+          bitrate: '8 Mbps',
+          focusMode: cameraSettings.focusMode,
+          duration: duration,
+          qualitySeconds: qualitySeconds,
+        }));
+      }
 
       setUploadStep(2);
       await new Promise((r) => setTimeout(r, 500));
@@ -235,23 +420,28 @@ export function VideoRecorderModal({
       await new Promise((r) => setTimeout(r, 300));
 
       setUploadStep(4);
-      const result = await submitClaimAction(formData);
+      console.log('[VideoRecorder] Calling submitReportAction with policy...');
+      const result = await submitReportAction(formData);
+      console.log('[VideoRecorder] Submission result:', result);
 
-      if (result.success && result.claimId) {
+      if (result.success && result.reportId) {
         setUploadStep(5);
         await new Promise((r) => setTimeout(r, 300));
 
         setUploadStep(6);
         await new Promise((r) => setTimeout(r, 500));
 
-        onSuccess?.(result.claimId);
-        handleOpenChange(false);
-        router.push(`/auth/claims/${result.claimId}`);
+        onSuccess?.(result.reportId);
+        // Navigate first - use replace for more reliable navigation
+        // The page change will unmount the modal
+        router.replace(`/auth/reports/${result.reportId}`);
       } else {
-        setError(result.message || "Failed to submit claim");
+        console.error('[VideoRecorder] Submission failed:', result.message);
+        setError(result.message || "Failed to submit report");
         setModalState("policy-step");
       }
     } catch (err) {
+      console.error('[VideoRecorder] Submission error:', err);
       setError(err instanceof Error ? err.message : "Submission failed");
       setModalState("policy-step");
     }
@@ -263,25 +453,22 @@ export function VideoRecorderModal({
 
   const displayError = error || cameraError || recorderError;
 
-  return (
-    <Dialog open={open} onOpenChange={handleOpenChange}>
-      <DialogTrigger asChild>{children}</DialogTrigger>
+  // Get title based on modal state
+  const getModalTitle = () => {
+    if (modalState === "permission-prompt") return "Camera Access";
+    if (modalState === "permission-denied") return "Camera Access Denied";
+    if (modalState === "ready" || modalState === "recording") return "Record Video";
+    if (modalState === "processing") return "Processing...";
+    if (modalState === "compressing") return "Processing Video";
+    if (modalState === "preview") return "Preview Recording";
+    if (modalState === "policy-step") return "Add Insurance Policy";
+    if (modalState === "uploading") return "Submitting Report";
+    return "Camera";
+  };
 
-      <DialogContent className="max-w-2xl h-[85vh] flex flex-col p-0 gap-0">
-        <DialogHeader className="px-6 py-4 border-b flex-shrink-0">
-          <DialogTitle>
-            {modalState === "permission-prompt" && "Camera Access"}
-            {modalState === "permission-denied" && "Camera Access Denied"}
-            {(modalState === "ready" || modalState === "recording") &&
-              "Record Video"}
-            {modalState === "compressing" && "Processing Video"}
-            {modalState === "preview" && "Preview Recording"}
-            {modalState === "policy-step" && "Add Insurance Policy"}
-            {modalState === "uploading" && "Submitting Claim"}
-          </DialogTitle>
-        </DialogHeader>
-
-        <div className="flex-1 flex flex-col p-6 overflow-y-auto min-h-0">
+  // Shared modal body content
+  const modalBody = (
+    <div className="flex-1 flex flex-col p-6 overflow-y-auto min-h-0">
           {/* Permission Prompt */}
           {modalState === "permission-prompt" && (
             <div className="flex flex-col items-center justify-center h-full gap-6 text-center">
@@ -353,12 +540,18 @@ export function VideoRecorderModal({
                   muted
                   className="w-full h-full object-cover"
                 />
+
+                {/* Recording indicator */}
                 {isRecording && (
-                  <div className="absolute top-4 left-4 flex items-center gap-2 bg-black/60 px-3 py-1.5 rounded-full">
+                  <div className="absolute top-4 left-4 flex items-center gap-2 bg-black/60 px-3 py-1.5 rounded-full z-20">
                     <div className="w-3 h-3 rounded-full bg-destructive animate-pulse" />
                     <span className="text-white text-sm font-medium">REC</span>
                   </div>
                 )}
+
+                {/* Forensic quality overlays */}
+                <GhostFrameOverlay isRecording={isRecording} />
+                <SpeedAlert isMovingTooFast={isMovingTooFast} isRecording={isRecording} />
               </div>
 
               {/* Controls */}
@@ -370,6 +563,19 @@ export function VideoRecorderModal({
                 onStop={handleStopRecording}
                 onCancel={handleCancel}
               />
+            </div>
+          )}
+
+          {/* Processing (after recording stop, before preview) */}
+          {modalState === "processing" && (
+            <div className="flex flex-col items-center justify-center h-full gap-6 text-center">
+              <div className="w-16 h-16 border-4 border-primary border-t-transparent rounded-full animate-spin" />
+              <div className="space-y-2">
+                <h3 className="text-lg font-semibold">Processing Recording</h3>
+                <p className="text-sm text-muted-foreground">
+                  Preparing your video...
+                </p>
+              </div>
             </div>
           )}
 
@@ -429,6 +635,58 @@ export function VideoRecorderModal({
             </div>
           )}
         </div>
+  );
+
+  // Mobile: Use Sheet (drawer from bottom)
+  // Use locked value to prevent switching between Dialog/Sheet during recording
+  if (useSheetLayout) {
+    return (
+      <Sheet open={open} onOpenChange={handleOpenChange}>
+        <SheetTrigger asChild>{children}</SheetTrigger>
+        <SheetContent
+          side="bottom"
+          className="h-[90vh] flex flex-col p-0 gap-0"
+          showCloseButton={!isActiveState}
+          onInteractOutside={(e) => {
+            if (isActiveStateRef.current) e.preventDefault();
+          }}
+          onEscapeKeyDown={(e) => {
+            if (isActiveStateRef.current) e.preventDefault();
+          }}
+          onPointerDownOutside={(e) => {
+            if (isActiveStateRef.current) e.preventDefault();
+          }}
+        >
+          <SheetHeader className="px-6 py-4 border-b flex-shrink-0">
+            <SheetTitle>{getModalTitle()}</SheetTitle>
+          </SheetHeader>
+          {modalBody}
+        </SheetContent>
+      </Sheet>
+    );
+  }
+
+  // Desktop: Use Dialog (centered modal)
+  return (
+    <Dialog open={open} onOpenChange={handleOpenChange}>
+      <DialogTrigger asChild>{children}</DialogTrigger>
+      <DialogContent
+        className="max-w-2xl h-[85vh] flex flex-col p-0 gap-0 [&>[data-slot=dialog-close]]:top-[18px]"
+        showCloseButton={!isActiveState}
+        onInteractOutside={(e) => {
+          if (isActiveStateRef.current) e.preventDefault();
+        }}
+        onEscapeKeyDown={(e) => {
+          if (isActiveStateRef.current) e.preventDefault();
+        }}
+        onPointerDownOutside={(e) => {
+          if (isActiveStateRef.current) e.preventDefault();
+        }}
+      >
+        <DialogHeader className="px-6 py-4 border-b flex-shrink-0">
+          <DialogTitle>{getModalTitle()}</DialogTitle>
+        </DialogHeader>
+        {modalBody}
       </DialogContent>
     </Dialog>
   );

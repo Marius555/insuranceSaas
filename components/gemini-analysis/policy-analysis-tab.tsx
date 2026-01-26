@@ -8,7 +8,8 @@ import { ProgressIndicator } from "./progress-indicator";
 import { AnalysisResultDisplay } from "./analysis-result-display";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { submitClaimAction } from "@/appwrite/submitClaimAction";
+import { submitReportAction } from "@/appwrite/submitReportAction";
+import { getUserLocation } from "@/lib/utils/country-detection";
 import type { EnhancedAutoDamageAnalysis } from "@/lib/gemini/types";
 
 export function PolicyAnalysisTab() {
@@ -19,9 +20,10 @@ export function PolicyAnalysisTab() {
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [currentStep, setCurrentStep] = useState(1);
   const [result, setResult] = useState<EnhancedAutoDamageAnalysis | null>(null);
-  const [claimId, setClaimId] = useState<string | null>(null);
-  const [claimNumber, setClaimNumber] = useState<string | null>(null);
+  const [reportId, setReportId] = useState<string | null>(null);
+  const [reportNumber, setReportNumber] = useState<string | null>(null);
   const [securityWarnings, setSecurityWarnings] = useState<string[]>([]);
+  const [currencySymbol, setCurrencySymbol] = useState<string>("$");
   const [error, setError] = useState<string>("");
 
   const handleMediaFilesSelected = (selectedFiles: File[]) => {
@@ -34,8 +36,8 @@ export function PolicyAnalysisTab() {
     setMediaType(newMediaType);
     setError("");
     setResult(null);
-    setClaimId(null);
-    setClaimNumber(null);
+    setReportId(null);
+    setReportNumber(null);
     setSecurityWarnings([]);
   };
 
@@ -63,8 +65,8 @@ export function PolicyAnalysisTab() {
     setCurrentStep(1);
     setError("");
     setResult(null);
-    setClaimId(null);
-    setClaimNumber(null);
+    setReportId(null);
+    setReportNumber(null);
     setSecurityWarnings([]);
 
     try {
@@ -98,6 +100,13 @@ export function PolicyAnalysisTab() {
       // Add policy file
       formData.append('policyFile', policyFile);
 
+      // Add user's location for localized pricing
+      const location = getUserLocation();
+      formData.append('userCountry', location.country);
+      formData.append('userCurrency', location.currency);
+      formData.append('userCurrencySymbol', location.currencySymbol);
+      setCurrencySymbol(location.currencySymbol);
+
       // Step 3: Scanning for security threats
       setCurrentStep(3);
       await new Promise(resolve => setTimeout(resolve, 1000)); // Longer for PDF scanning
@@ -106,7 +115,7 @@ export function PolicyAnalysisTab() {
       setCurrentStep(4);
 
       // Call server action (this does: upload + scan + analyze + save to DB)
-      const result = await submitClaimAction(formData);
+      const result = await submitReportAction(formData);
 
       if (!result.success) {
         // Handle specific error types
@@ -128,14 +137,14 @@ export function PolicyAnalysisTab() {
 
       // Store results
       setResult(result.analysis as EnhancedAutoDamageAnalysis);
-      setClaimId(result.claimId!);
-      setClaimNumber(result.claimNumber!);
+      setReportId(result.reportId!);
+      setReportNumber(result.reportNumber!);
 
       if (result.warnings && result.warnings.length > 0) {
         setSecurityWarnings(result.warnings);
       }
 
-      console.log(`✅ Claim created successfully: ${result.claimNumber}`);
+      console.log(`✅ Report created successfully: ${result.reportNumber}`);
     } catch (err) {
       console.error('Analysis error:', err);
       setError(err instanceof Error ? err.message : 'Analysis failed. Please try again.');
@@ -152,7 +161,7 @@ export function PolicyAnalysisTab() {
       <div>
         <h2 className="text-2xl font-bold">Enhanced Policy Analysis</h2>
         <p className="text-muted-foreground mt-1">
-          Upload damage media and insurance policy for comprehensive claim assessment with fraud detection
+          Upload damage media and insurance policy for comprehensive report assessment with fraud detection
         </p>
       </div>
 
@@ -225,7 +234,7 @@ export function PolicyAnalysisTab() {
           <svg className="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75L11.25 15 15 9.75m-3-7.036A11.959 11.959 0 013.598 6 11.99 11.99 0 003 9.749c0 5.592 3.824 10.29 9 11.623 5.176-1.332 9-6.03 9-11.622 0-1.31-.21-2.571-.598-3.751h-.152c-3.196 0-6.1-1.248-8.25-3.285z" />
           </svg>
-          Analyze & Submit Claim with Policy
+          Analyze & Submit Report with Policy
         </Button>
       )}
 
@@ -244,7 +253,7 @@ export function PolicyAnalysisTab() {
       )}
 
       {/* Results */}
-      {result && claimId && claimNumber && (
+      {result && reportId && reportNumber && (
         <AnalysisResultDisplay
           analysis={result}
           securityWarnings={securityWarnings}
@@ -252,18 +261,20 @@ export function PolicyAnalysisTab() {
             result.vehicleVerification.verificationStatus === 'mismatched' ? 'high' :
             securityWarnings.length > 0 ? 'medium' : 'low'
           }
-          claimId={claimId}
-          claimNumber={claimNumber}
+          reportId={reportId}
+          reportNumber={reportNumber}
           uploadedFiles={mediaFiles}
           policyFile={policyFile}
+          currencySymbol={currencySymbol}
           onReset={() => {
             setMediaFiles([]);
             setPolicyFile(null);
             setMediaType(null);
             setResult(null);
-            setClaimId(null);
-            setClaimNumber(null);
+            setReportId(null);
+            setReportNumber(null);
             setSecurityWarnings([]);
+            setCurrencySymbol("$");
             setError("");
           }}
         />

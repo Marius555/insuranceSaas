@@ -23,7 +23,7 @@ import type {
  */
 export async function analyzeAutoDamageFromImages(
   images: Array<{ base64: string; mimeType: ImageMimeType; angle?: string }>,
-  options?: { scanForInjection?: boolean }
+  options?: { scanForInjection?: boolean; userCountry?: string; userCurrency?: string; userCurrencySymbol?: string }
 ): Promise<GeminiResult<{ analysis: AutoDamageAnalysis; securityWarnings?: string[] }>> {
   try {
     // Validation: Check image count
@@ -82,6 +82,19 @@ You MUST produce identical outputs for identical inputs. Follow these rules:
 5. Be deterministic in your reasoning process
 `;
 
+    // Build localized pricing context if country is provided
+    const currency = options?.userCurrency || 'USD';
+    const currencySymbol = options?.userCurrencySymbol || '$';
+    const LOCALIZED_PRICING_CONTEXT = options?.userCountry ? `
+LOCALIZED PRICING CONTEXT:
+The policyholder is located in ${options.userCountry}.
+- All repair cost estimates MUST be in ${currency} (${currencySymbol})
+- Format all prices with the ${currencySymbol} symbol
+- Use typical ${options.userCountry} market prices for repairs
+- Consider ${options.userCountry} labor rates for auto body repair
+- Use ${options.userCountry} parts pricing (both OEM and aftermarket)
+` : '';
+
     // Sort images for consistent ordering
     const sortedImages = [...images].sort((a, b) => {
       // Sort by angle if available, otherwise maintain original order
@@ -94,7 +107,7 @@ You MUST produce identical outputs for identical inputs. Follow these rules:
       .map((img, idx) => img.angle || `Image ${idx + 1}`)
       .join(', ');
 
-    const prompt = `${SECURITY_PREAMBLE}${CONSISTENCY_INSTRUCTION}
+    const prompt = `${SECURITY_PREAMBLE}${CONSISTENCY_INSTRUCTION}${LOCALIZED_PRICING_CONTEXT}
 
 You are an expert auto damage assessor. Analyze the provided ${images.length} image(s) of vehicle damage and provide a structured assessment.
 

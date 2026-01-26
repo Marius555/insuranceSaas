@@ -5,7 +5,7 @@
  * Usage:
  * import { COLLECTION_IDS, DATABASE_ID } from '@/lib/env';
  *
- * const claim = await databases.getDocument(DATABASE_ID, COLLECTION_IDS.CLAIMS, claimId);
+ * const report = await databases.getDocument(DATABASE_ID, COLLECTION_IDS.REPORTS, reportId);
  */
 
 /**
@@ -21,16 +21,18 @@ export const STORAGE_BUCKET_ID = process.env.STORAGE_BUKET_ID!; // Note: preserv
 /**
  * Collection IDs for all database collections
  * These are automatically populated by the schema submission script
+ * Note: Env var names kept as-is to avoid Appwrite schema changes
  */
 export const COLLECTION_IDS = {
   USERS: process.env.USERS_COLLECTION_ID!,
   INSURANCE_COMPANIES: process.env.INSURANCE_COMPANIES_COLLECTION_ID!,
-  CLAIMS: process.env.CLAIMS_COLLECTION_ID!,
-  CLAIM_DAMAGE_DETAILS: process.env.CLAIM_DAMAGE_DETAILS_COLLECTION_ID!,
-  CLAIM_VEHICLE_VERIFICATION: process.env.CLAIM_VEHICLE_VERIFICATION_COLLECTION_ID!,
-  CLAIM_ASSESSMENTS: process.env.CLAIM_ASSESSMENTS_COLLECTION_ID!,
-  CLAIM_FRAUD_ASSESSMENTS: process.env.CLAIM_FRAUD_ASSESSMENTS_COLLECTION_ID!,
+  REPORTS: process.env.CLAIMS_COLLECTION_ID!,
+  REPORT_DAMAGE_DETAILS: process.env.CLAIM_DAMAGE_DETAILS_COLLECTION_ID!,
+  REPORT_VEHICLE_VERIFICATION: process.env.CLAIM_VEHICLE_VERIFICATION_COLLECTION_ID!,
+  REPORT_ASSESSMENTS: process.env.CLAIM_ASSESSMENTS_COLLECTION_ID!,
+  REPORT_FRAUD_ASSESSMENTS: process.env.CLAIM_FRAUD_ASSESSMENTS_COLLECTION_ID!,
   AUDIT_LOGS: process.env.AUDIT_LOGS_COLLECTION_ID!,
+  FEEDBACK: process.env.FEEDBACK_COLLECTION_ID!,
 } as const;
 
 /**

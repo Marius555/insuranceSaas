@@ -7,7 +7,6 @@ import {
     Home01Icon,
     FileValidationIcon,
     SolidLine02Icon,
-    SentIcon,
     Settings02Icon,
     User03Icon,
     Briefcase01Icon,
@@ -22,7 +21,9 @@ import {
 import * as React from "react"
 
 import { NavSecondary } from "./nav-secondary"
+import { FeedbackModal } from "./feedback-modal"
 import { LogoutAndRedirect } from "@/appwrite/logOut"
+import { useUser } from "@/lib/context/user-context"
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -46,33 +47,25 @@ import {
   useSidebar,
 } from "@/components/ui/sidebar"
 
-interface AppSidebarProps extends React.ComponentProps<typeof Sidebar> {
-  userId?: string;
-  userEmail?: string;
-  userRole?: 'user' | 'admin' | 'insurance_adjuster';
-}
-
-export function AppSidebar({ userId, userEmail, userRole, ...props }: AppSidebarProps) {
+export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   const pathname = usePathname()
-  const { isMobile } = useSidebar()
-
-  // Extract userId from pathname if not provided as prop
-  const extractedUserId = userId || pathname?.match(/\/auth\/dashboard\/([^/]+)/)?.[1] || ''
+  const { isMobile, setOpenMobile } = useSidebar()
+  const { userId, email: userEmail, role: userRole } = useUser()
 
   const navItems = [
     {
       title: "Dashboard",
-      url: `/auth/dashboard/${extractedUserId}`,
+      url: `/auth/dashboard/${userId}`,
       icon: Home01Icon,
     },
     {
-      title: "Claims",
-      url: `/auth/dashboard/${extractedUserId}/claims`,
+      title: "Reports",
+      url: `/auth/dashboard/${userId}/reports`,
       icon: FileValidationIcon,
     },
     {
       title: "Settings",
-      url: `/auth/dashboard/${extractedUserId}/settings`,
+      url: `/auth/dashboard/${userId}/settings`,
       icon: Settings02Icon,
     },
   ]
@@ -82,11 +75,6 @@ export function AppSidebar({ userId, userEmail, userRole, ...props }: AppSidebar
       title: "Support",
       url: "#",
       icon: () => <HugeiconsIcon icon={SolidLine02Icon} />,
-    },
-    {
-      title: "Feedback",
-      url: "#",
-      icon: () => <HugeiconsIcon icon={SentIcon} />,
     },
   ]
 
@@ -181,11 +169,14 @@ export function AppSidebar({ userId, userEmail, userRole, ...props }: AppSidebar
             <SidebarMenu>
               {navItems.map((item) => {
                 const isActive = pathname === item.url ||
-                  (item.url.endsWith('/claims') && pathname?.startsWith(item.url))
+                  (item.url.endsWith('/reports') && pathname?.startsWith(item.url))
                 return (
                   <SidebarMenuItem key={item.title}>
                     <SidebarMenuButton asChild isActive={isActive}>
-                      <Link href={item.url}>
+                      <Link
+                        href={item.url}
+                        onClick={() => isMobile && setOpenMobile(false)}
+                      >
                         <HugeiconsIcon icon={item.icon} />
                         <span>{item.title}</span>
                       </Link>
@@ -197,7 +188,9 @@ export function AppSidebar({ userId, userEmail, userRole, ...props }: AppSidebar
           </SidebarGroupContent>
         </SidebarGroup>
         <SidebarSeparator />
-        <NavSecondary items={navSecondary} />
+        <NavSecondary items={navSecondary}>
+          <FeedbackModal />
+        </NavSecondary>
       </SidebarContent>
     </Sidebar>
   )

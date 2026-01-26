@@ -95,12 +95,12 @@ export function isAppwriteError(error: unknown): error is AppwriteError {
   );
 }
 
-// Claims Collection (Core Data)
-export interface ClaimDocument extends Models.Document {
+// Reports Collection (Core Data)
+export interface ReportDocument extends Models.Document {
   user_id: string;
   insurance_company_id?: string;
   claim_number: string;
-  claim_status: 'pending' | 'approved' | 'denied' | 'partial' | 'needs_investigation';
+  claim_status: 'pending' | 'analyzed' | 'approved' | 'denied' | 'partial' | 'needs_investigation';
   damage_type: 'collision' | 'comprehensive' | 'weather' | 'vandalism' | 'unknown';
   damage_cause?: string;
   overall_severity: 'minor' | 'moderate' | 'severe' | 'total_loss';
@@ -128,8 +128,8 @@ export interface ClaimDocument extends Models.Document {
   is_public: boolean;
 }
 
-// Claim Damage Details Collection (One-to-Many)
-export interface ClaimDamageDetailDocument extends Models.Document {
+// Report Damage Details Collection (One-to-Many)
+export interface ReportDamageDetailDocument extends Models.Document {
   claim_id: string;
   part_name: string;
   severity: 'minor' | 'moderate' | 'severe'; // Database enum constraint (schema/database.schema.json:352)
@@ -138,8 +138,8 @@ export interface ClaimDamageDetailDocument extends Models.Document {
   sort_order: number;
 }
 
-// Claim Vehicle Verification Collection (One-to-One)
-export interface ClaimVehicleVerificationDocument extends Models.Document {
+// Report Vehicle Verification Collection (One-to-One)
+export interface ReportVehicleVerificationDocument extends Models.Document {
   claim_id: string;
   video_license_plate?: string;
   video_vin?: string;
@@ -159,8 +159,8 @@ export interface ClaimVehicleVerificationDocument extends Models.Document {
   notes?: string;
 }
 
-// Claim Assessments Collection (One-to-One)
-export interface ClaimAssessmentDocument extends Models.Document {
+// Report Assessments Collection (One-to-One)
+export interface ReportAssessmentDocument extends Models.Document {
   claim_id: string;
   coverage_types?: string[];
   deductible_types?: string[];
@@ -182,11 +182,27 @@ export interface ClaimAssessmentDocument extends Models.Document {
   policy_references?: string[];
 }
 
+// Report Fraud Assessments Collection (One-to-One)
+export interface ReportFraudAssessmentDocument extends Models.Document {
+  claim_id: string;
+  damage_age_estimated?: string;
+  damage_age_confidence?: number;
+  damage_age_data_json?: string;
+  contamination_detected: boolean;
+  contamination_data_json?: string;
+  rust_detected: boolean;
+  rust_fraud_indicator: boolean;
+  rust_data_json?: string;
+  pre_existing_detected: boolean;
+  pre_existing_risk_level?: string;
+  pre_existing_data_json?: string;
+}
+
 // Audit Logs Collection
 export interface AuditLogDocument extends Models.Document {
   user_id?: string;
-  action: 'analyze_video' | 'analyze_image' | 'analyze_policy' | 'create_claim' | 'update_claim' | 'delete_claim' | 'user_login' | 'user_logout';
-  resource_type: 'claim' | 'analysis' | 'user' | 'insurance_company';
+  action: 'analyze_video' | 'analyze_image' | 'analyze_policy' | 'create_report' | 'update_report' | 'delete_report' | 'user_login' | 'user_logout';
+  resource_type: 'report' | 'analysis' | 'user' | 'insurance_company';
   resource_id?: string;
   result: 'success' | 'error' | 'flagged';
   file_hashes?: string[];
@@ -198,73 +214,82 @@ export interface AuditLogDocument extends Models.Document {
   metadata?: string; // JSON object
 }
 
+// Feedback Collection
+export interface FeedbackDocument extends Models.Document {
+  user_id: string;
+  category: 'bug_report' | 'feature_request' | 'general' | 'complaint';
+  rating: number;
+  feedback_text: string;
+  status: 'pending_review' | 'reviewed' | 'addressed';
+}
+
 /**
- * Helper functions for fetching full claim data with related collections
+ * Helper functions for fetching full report data with related collections
  */
 
 import { Query } from 'node-appwrite';
 
 /**
- * Full claim data with all related collections
+ * Full report data with all related collections
  */
-export interface FullClaimData {
-  claim: ClaimDocument;
-  damageDetails: ClaimDamageDetailDocument[];
-  vehicleVerification: ClaimVehicleVerificationDocument | null;
-  assessment: ClaimAssessmentDocument | null;
+export interface FullReportData {
+  report: ReportDocument;
+  damageDetails: ReportDamageDetailDocument[];
+  vehicleVerification: ReportVehicleVerificationDocument | null;
+  assessment: ReportAssessmentDocument | null;
 }
 
 /**
- * Fetch full claim data including all related collections
+ * Fetch full report data including all related collections
  *
  * @example
  * import { adminAction } from '@/appwrite/adminOrClient';
  * import { DATABASE_ID, COLLECTION_IDS } from '@/lib/env';
  *
  * const { databases } = await adminAction();
- * const fullClaim = await fetchFullClaimData(databases, DATABASE_ID, COLLECTION_IDS, claimId);
+ * const fullReport = await fetchFullReportData(databases, DATABASE_ID, COLLECTION_IDS, reportId);
  */
-export async function fetchFullClaimData(
+export async function fetchFullReportData(
   databases: Databases,
   databaseId: string,
   collectionIds: {
-    CLAIMS: string;
-    CLAIM_DAMAGE_DETAILS: string;
-    CLAIM_VEHICLE_VERIFICATION: string;
-    CLAIM_ASSESSMENTS: string;
+    REPORTS: string;
+    REPORT_DAMAGE_DETAILS: string;
+    REPORT_VEHICLE_VERIFICATION: string;
+    REPORT_ASSESSMENTS: string;
   },
-  claimId: string
-): Promise<FullClaimData> {
-  // Fetch main claim
-  const claim = await databases.getDocument<ClaimDocument>(
+  reportId: string
+): Promise<FullReportData> {
+  // Fetch main report
+  const report = await databases.getDocument<ReportDocument>(
     databaseId,
-    collectionIds.CLAIMS,
-    claimId
+    collectionIds.REPORTS,
+    reportId
   );
 
   // Fetch damage details (one-to-many)
-  const damageDetailsResult = await databases.listDocuments<ClaimDamageDetailDocument>(
+  const damageDetailsResult = await databases.listDocuments<ReportDamageDetailDocument>(
     databaseId,
-    collectionIds.CLAIM_DAMAGE_DETAILS,
-    [Query.equal('claim_id', claimId), Query.orderAsc('sort_order')]
+    collectionIds.REPORT_DAMAGE_DETAILS,
+    [Query.equal('claim_id', reportId), Query.orderAsc('sort_order')]
   );
 
   // Fetch vehicle verification (one-to-one)
-  const verificationResult = await databases.listDocuments<ClaimVehicleVerificationDocument>(
+  const verificationResult = await databases.listDocuments<ReportVehicleVerificationDocument>(
     databaseId,
-    collectionIds.CLAIM_VEHICLE_VERIFICATION,
-    [Query.equal('claim_id', claimId), Query.limit(1)]
+    collectionIds.REPORT_VEHICLE_VERIFICATION,
+    [Query.equal('claim_id', reportId), Query.limit(1)]
   );
 
   // Fetch assessment (one-to-one)
-  const assessmentResult = await databases.listDocuments<ClaimAssessmentDocument>(
+  const assessmentResult = await databases.listDocuments<ReportAssessmentDocument>(
     databaseId,
-    collectionIds.CLAIM_ASSESSMENTS,
-    [Query.equal('claim_id', claimId), Query.limit(1)]
+    collectionIds.REPORT_ASSESSMENTS,
+    [Query.equal('claim_id', reportId), Query.limit(1)]
   );
 
   return {
-    claim,
+    report,
     damageDetails: damageDetailsResult.documents,
     vehicleVerification: verificationResult.documents[0] || null,
     assessment: assessmentResult.documents[0] || null,

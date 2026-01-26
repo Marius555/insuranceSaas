@@ -240,10 +240,13 @@ export async function deleteFile(
  * Helper function to validate media file types
  * Accepts images (jpeg, png, webp) and videos (mp4, webm, quicktime)
  *
- * @param mimeType - File MIME type
+ * @param mimeType - File MIME type (handles codec suffixes like "video/webm;codecs=vp8")
  * @returns True if valid media type
  */
 function isValidMediaType(mimeType: string): boolean {
+  // Extract base MIME type (before semicolon for types like "video/webm;codecs=vp8")
+  const baseMimeType = mimeType.toLowerCase().split(';')[0].trim();
+
   const validTypes = [
     // Images
     'image/jpeg',
@@ -259,7 +262,7 @@ function isValidMediaType(mimeType: string): boolean {
     'video/x-msvideo', // AVI
   ];
 
-  return validTypes.includes(mimeType.toLowerCase());
+  return validTypes.includes(baseMimeType);
 }
 
 /**
