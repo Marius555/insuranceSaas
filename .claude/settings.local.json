@@ -31,7 +31,12 @@
       "Bash(node -e:*)",
       "Bash(taskkill:*)",
       "Bash(tasklist:*)",
-      "Bash(npm run lint)"
+      "Bash(npm run lint)",
+      "WebSearch",
+      "WebFetch(domain:github.com)",
+      "Bash(npm view:*)",
+      "Bash(npm uninstall:*)",
+      "Bash(del \"C:\\\\Users\\\\wanma\\\\OneDrive - Dalo6116\\\\Desktop\\\\websites\\\\insurance\\\\hooks\\\\use-mobile.ts\")"
     ]
   }
 }

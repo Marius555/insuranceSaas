@@ -5,7 +5,7 @@ import { FileUploadZone } from "@/components/gemini-analysis/file-upload-zone";
 import { MediaPreview } from "@/components/gemini-analysis/media-preview";
 import { ProgressIndicator } from "@/components/gemini-analysis/progress-indicator";
 import { submitReportAction } from "@/appwrite/submitReportAction";
-import { type PolicyInfo } from "@/appwrite/getUserPolicies";
+import { type PolicyInfo } from "@/lib/types/appwrite";
 import { usePolicies } from "@/lib/context/policy-context";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -200,7 +200,7 @@ export function PolicyAnalysisTabContent({ onSuccess }: PolicyAnalysisTabContent
               </div>
             </div>
 
-            <div className="flex items-center gap-1 flex-shrink-0 ml-2">
+            <div className="flex gap-1  ml-2">
               {!isNew && hasMultiplePolicies && (
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
@@ -285,10 +285,10 @@ export function PolicyAnalysisTabContent({ onSuccess }: PolicyAnalysisTabContent
         <label className="block text-sm font-medium">Insurance Policy</label>
         <div className="border rounded-lg p-4 bg-card min-h-[80px]">
           <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <HugeiconsIcon icon={Pdf02Icon} className="h-8 w-8 text-red-500" />
-              <div>
-                <p className="font-medium">{newPolicyFile.name}</p>
+            <div className="flex items-center gap-3 min-w-0 flex-1">
+              <HugeiconsIcon icon={Pdf02Icon} className="h-8 w-8 text-red-500 shrink-0" />
+              <div className="min-w-0 flex-1">
+                <p className="font-medium truncate">{newPolicyFile.name}</p>
                 <p className="text-sm text-muted-foreground">
                   {(newPolicyFile.size / 1024 / 1024).toFixed(2)} MB
                   <Badge variant="outline" className="ml-2">New Upload</Badge>
@@ -310,7 +310,7 @@ export function PolicyAnalysisTabContent({ onSuccess }: PolicyAnalysisTabContent
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 flex-1 flex flex-col">
       {!isAnalyzing && !success && (
         <>
           {/* Media upload section */}
@@ -377,7 +377,7 @@ export function PolicyAnalysisTabContent({ onSuccess }: PolicyAnalysisTabContent
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
                         <button className="text-sm text-primary hover:underline flex items-center gap-1">
-                          Select from previous
+                          Previous Policies
                           <HugeiconsIcon icon={Add01Icon} className="h-3 w-3" />
                         </button>
                       </DropdownMenuTrigger>

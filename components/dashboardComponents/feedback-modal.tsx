@@ -38,12 +38,17 @@ const categoryLabels: Record<FeedbackCategory, string> = {
 }
 
 export function FeedbackModal() {
+  const [mounted, setMounted] = React.useState(false)
   const [open, setOpen] = React.useState(false)
   const [category, setCategory] = React.useState<FeedbackCategory | ''>('')
   const [rating, setRating] = React.useState<number>(0)
   const [feedbackText, setFeedbackText] = React.useState('')
   const [isSubmitting, setIsSubmitting] = React.useState(false)
   const [errorMessage, setErrorMessage] = React.useState('')
+
+  React.useEffect(() => {
+    setMounted(true)
+  }, [])
 
   const resetForm = () => {
     setCategory('')
@@ -88,6 +93,17 @@ export function FeedbackModal() {
     } else {
       setErrorMessage(result.message || 'Failed to submit feedback')
     }
+  }
+
+  if (!mounted) {
+    return (
+      <SidebarMenuItem>
+        <SidebarMenuButton size="sm">
+          <HugeiconsIcon icon={SentIcon} />
+          <span>Feedback</span>
+        </SidebarMenuButton>
+      </SidebarMenuItem>
+    )
   }
 
   return (

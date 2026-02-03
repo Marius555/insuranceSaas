@@ -1,7 +1,7 @@
 "use client";
 
 import { createContext, useContext, useState, ReactNode, useCallback } from "react";
-import { type PolicyInfo } from "@/appwrite/getUserPolicies";
+import { type PolicyInfo } from "@/lib/types/appwrite";
 
 interface PolicyContextData {
   policies: PolicyInfo[];

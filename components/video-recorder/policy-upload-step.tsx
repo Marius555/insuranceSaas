@@ -4,7 +4,7 @@ import { useState, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { FileUploadZone } from "@/components/gemini-analysis/file-upload-zone";
-import { type PolicyInfo } from "@/appwrite/getUserPolicies";
+import { type PolicyInfo } from "@/lib/types/appwrite";
 import { usePolicies } from "@/lib/context/policy-context";
 import {
   DropdownMenu,

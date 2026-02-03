@@ -101,7 +101,7 @@ export function QuickAnalysisTabContent({ onSuccess }: QuickAnalysisTabContentPr
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 flex-1 flex flex-col">
       {!isAnalyzing && !success && (
         <>
           <div className="space-y-2">

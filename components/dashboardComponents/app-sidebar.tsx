@@ -51,6 +51,11 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   const pathname = usePathname()
   const { isMobile, setOpenMobile } = useSidebar()
   const { userId, email: userEmail, role: userRole } = useUser()
+  const [mounted, setMounted] = React.useState(false)
+
+  React.useEffect(() => {
+    setMounted(true)
+  }, [])
 
   const navItems = [
     {
@@ -78,87 +83,87 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
     },
   ]
 
+  const headerButtonContent = (
+    <>
+      <div className="bg-sidebar-primary text-sidebar-primary-foreground flex aspect-square size-8 items-center justify-center rounded-lg">
+        <HugeiconsIcon
+          className="size-4"
+          icon={userRole === 'insurance_adjuster' ? Briefcase01Icon : User03Icon}
+        />
+      </div>
+      <div className="grid flex-1 text-left text-sm leading-tight">
+        <span className="truncate font-medium">{userEmail || 'User'}</span>
+        <span className="truncate text-xs">
+          {userRole === 'insurance_adjuster' ? 'Insurance Company' : 'User'}
+        </span>
+      </div>
+      <HugeiconsIcon icon={UnfoldMoreIcon} className="ml-auto" />
+    </>
+  )
+
   return (
     <Sidebar variant="inset" {...props}>
       <SidebarHeader>
         <SidebarMenu>
           <SidebarMenuItem>
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <SidebarMenuButton
-                  size="lg"
-                  className="data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground"
+            {mounted ? (
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <SidebarMenuButton
+                    size="lg"
+                    className="data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground"
+                  >
+                    {headerButtonContent}
+                  </SidebarMenuButton>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent
+                  className="w-(--radix-dropdown-menu-trigger-width) min-w-56 rounded-lg"
+                  side={isMobile ? "bottom" : "right"}
+                  align="start"
+                  sideOffset={4}
                 >
-                  <div className="bg-sidebar-primary text-sidebar-primary-foreground flex aspect-square size-8 items-center justify-center rounded-lg">
-                    <HugeiconsIcon
-                      className="size-4"
-                      icon={userRole === 'insurance_adjuster' ? Briefcase01Icon : User03Icon}
-                    />
-                  </div>
-                  <div className="grid flex-1 text-left text-sm leading-tight">
-                    <span className="truncate font-medium">{userEmail || 'User'}</span>
-                    <span className="truncate text-xs">
-                      {userRole === 'insurance_adjuster' ? 'Insurance Company' : 'User'}
-                    </span>
-                  </div>
-                  <HugeiconsIcon icon={UnfoldMoreIcon} className="ml-auto" />
-                </SidebarMenuButton>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent
-                className="w-(--radix-dropdown-menu-trigger-width) min-w-56 rounded-lg"
-                side={isMobile ? "bottom" : "right"}
-                align="start"
-                sideOffset={4}
+                  <DropdownMenuLabel>{userEmail || 'User'}</DropdownMenuLabel>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuGroup>
+                    <DropdownMenuItem>
+                      <HugeiconsIcon icon={SparklesIcon} />
+                      Upgrade to Pro
+                    </DropdownMenuItem>
+                  </DropdownMenuGroup>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuGroup>
+                    <DropdownMenuItem>
+                      <HugeiconsIcon icon={CheckmarkBadge01Icon} />
+                      Account
+                    </DropdownMenuItem>
+                    <DropdownMenuItem>
+                      <HugeiconsIcon icon={CreditCardIcon} />
+                      Billing
+                    </DropdownMenuItem>
+                    <DropdownMenuItem>
+                      <HugeiconsIcon icon={Notification01Icon} />
+                      Notifications
+                    </DropdownMenuItem>
+                  </DropdownMenuGroup>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem asChild>
+                    <form action={LogoutAndRedirect} className="w-full">
+                      <button type="submit" className="flex w-full items-center gap-2 px-2 py-1.5 text-sm">
+                        <HugeiconsIcon icon={LogoutSquare01Icon} />
+                        Log out
+                      </button>
+                    </form>
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            ) : (
+              <SidebarMenuButton
+                size="lg"
+                className="data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground"
               >
-                <DropdownMenuLabel className="p-0 font-normal">
-                  <div className="flex items-center gap-2 px-1 py-1.5 text-left text-sm">
-                    <div className="bg-sidebar-primary text-sidebar-primary-foreground flex aspect-square size-8 items-center justify-center rounded-lg">
-                      <HugeiconsIcon
-                        className="size-4"
-                        icon={userRole === 'insurance_adjuster' ? Briefcase01Icon : User03Icon}
-                      />
-                    </div>
-                    <div className="grid flex-1 text-left text-sm leading-tight">
-                      <span className="truncate font-medium">{userEmail || 'User'}</span>
-                      <span className="truncate text-xs">
-                        {userRole === 'insurance_adjuster' ? 'Insurance Company' : 'User'}
-                      </span>
-                    </div>
-                  </div>
-                </DropdownMenuLabel>
-                <DropdownMenuSeparator />
-                <DropdownMenuGroup>
-                  <DropdownMenuItem>
-                    <HugeiconsIcon icon={SparklesIcon} />
-                    Upgrade to Pro
-                  </DropdownMenuItem>
-                </DropdownMenuGroup>
-                <DropdownMenuSeparator />
-                <DropdownMenuGroup>
-                  <DropdownMenuItem>
-                    <HugeiconsIcon icon={CheckmarkBadge01Icon} />
-                    Account
-                  </DropdownMenuItem>
-                  <DropdownMenuItem>
-                    <HugeiconsIcon icon={CreditCardIcon} />
-                    Billing
-                  </DropdownMenuItem>
-                  <DropdownMenuItem>
-                    <HugeiconsIcon icon={Notification01Icon} />
-                    Notifications
-                  </DropdownMenuItem>
-                </DropdownMenuGroup>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem asChild>
-                  <form action={LogoutAndRedirect} className="w-full">
-                    <button type="submit" className="flex w-full items-center gap-2 px-2 py-1.5 text-sm">
-                      <HugeiconsIcon icon={LogoutSquare01Icon} />
-                      Log out
-                    </button>
-                  </form>
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
+                {headerButtonContent}
+              </SidebarMenuButton>
+            )}
           </SidebarMenuItem>
         </SidebarMenu>
       </SidebarHeader>

@@ -37,7 +37,7 @@ export default async function LandingPage() {
   }
 
   return (
-    <>
+    <div className="animate-page-enter">
       <OnboardingWrapper
         session={session}
         needsOnboarding={needsOnboarding}
@@ -51,6 +51,6 @@ export default async function LandingPage() {
         <Stats />
       </main>
       <Footer />
-    </>
+    </div>
   );
 }

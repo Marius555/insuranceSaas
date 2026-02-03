@@ -82,16 +82,16 @@ export function MediaPreview({
         {files.map((file, index) => (
           <div key={`${file.name}-${index}`} className="border rounded-lg p-4 bg-card">
             <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
+              <div className="flex items-center gap-3 min-w-0 flex-1">
                 <HugeiconsIcon
                   icon={mediaType === 'video' ? Video02Icon : Image02Icon}
                   className={cn(
-                    "h-8 w-8",
+                    "h-8 w-8 shrink-0",
                     mediaType === 'video' ? "text-blue-500" : "text-green-500"
                   )}
                 />
-                <div>
-                  <p className="font-medium">{file.name}</p>
+                <div className="min-w-0 flex-1">
+                  <p className="font-medium truncate">{file.name}</p>
                   <p className="text-sm text-muted-foreground">
                     {(file.size / 1024 / 1024).toFixed(2)} MB
                     <Badge variant="outline" className="ml-2">

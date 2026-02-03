@@ -100,6 +100,30 @@ async function reencodeVideo(file: File, targetSizeBytes: number): Promise<File>
 
     const chunks: Blob[] = [];
     let mediaRecorder: MediaRecorder | null = null;
+    let blobUrl: string | null = null;
+    let audioContext: AudioContext | null = null;
+    let canvasStream: MediaStream | null = null;
+
+    // Cleanup function to release all resources
+    const cleanup = () => {
+      if (blobUrl) {
+        URL.revokeObjectURL(blobUrl);
+        blobUrl = null;
+      }
+      if (canvasStream) {
+        canvasStream.getTracks().forEach(track => track.stop());
+        canvasStream = null;
+      }
+      if (audioContext && audioContext.state !== "closed") {
+        audioContext.close().catch(() => {});
+        audioContext = null;
+      }
+      video.pause();
+      video.src = "";
+      video.load();
+      video.remove();
+      canvas.remove();
+    };
 
     video.onloadedmetadata = () => {
       // Set canvas size (reduce resolution if file is very large)
@@ -113,18 +137,18 @@ async function reencodeVideo(file: File, targetSizeBytes: number): Promise<File>
       const videoBitsPerSecond = Math.min(targetBitsPerSecond, 1_000_000); // Cap at 1Mbps
 
       // Get stream from canvas
-      const canvasStream = canvas.captureStream(30);
+      canvasStream = canvas.captureStream(30);
 
       // Try to get audio from original video
       try {
-        const audioContext = new AudioContext();
+        audioContext = new AudioContext();
         const source = audioContext.createMediaElementSource(video);
         const destination = audioContext.createMediaStreamDestination();
         source.connect(destination);
         source.connect(audioContext.destination);
 
         destination.stream.getAudioTracks().forEach(track => {
-          canvasStream.addTrack(track);
+          canvasStream!.addTrack(track);
         });
       } catch {
         // Audio may not be available, continue without it
@@ -161,10 +185,12 @@ async function reencodeVideo(file: File, targetSizeBytes: number): Promise<File>
           file.name.replace(/\.[^.]+$/, `-compressed.${extension}`),
           { type: mimeType }
         );
+        cleanup();
         resolve(compressedFile);
       };
 
       mediaRecorder.onerror = () => {
+        cleanup();
         reject(new Error("MediaRecorder error during compression"));
       };
 
@@ -192,15 +218,20 @@ async function reencodeVideo(file: File, targetSizeBytes: number): Promise<File>
 
       video.play().then(() => {
         drawFrame();
-      }).catch(reject);
+      }).catch((err) => {
+        cleanup();
+        reject(err);
+      });
     };
 
     video.onerror = () => {
+      cleanup();
       reject(new Error("Failed to load video for compression"));
     };
 
     // Load video from file
-    video.src = URL.createObjectURL(file);
+    blobUrl = URL.createObjectURL(file);
+    video.src = blobUrl;
     video.load();
   });
 }

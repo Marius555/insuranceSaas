@@ -3,7 +3,6 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import {
   Table,
   TableBody,
@@ -76,7 +75,7 @@ export function ReportsTable({ reports }: ReportsTableProps) {
             </div>
             <div className="flex items-center justify-between text-sm">
               <span className="font-medium">
-                {currencySymbol}{report.estimated_total_repair_cost.toLocaleString()}
+                {currencySymbol}{report.estimated_total_repair_cost.toLocaleString('en-US')}
               </span>
               <span className="text-muted-foreground">
                 {new Date(report.analysis_timestamp).toLocaleDateString('en-US')}
@@ -92,13 +91,11 @@ export function ReportsTable({ reports }: ReportsTableProps) {
           <TableHeader>
             <TableRow>
               <TableHead>Report Number</TableHead>
-              <TableHead>Status</TableHead>
               <TableHead>Damage Type</TableHead>
               <TableHead>Severity</TableHead>
               <TableHead className="text-right">Est. Cost</TableHead>
               <TableHead className="text-right">Confidence</TableHead>
               <TableHead>Created</TableHead>
-              <TableHead className="text-right">Actions</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -111,11 +108,6 @@ export function ReportsTable({ reports }: ReportsTableProps) {
                 <TableCell className="font-medium">
                   {report.claim_number}
                 </TableCell>
-                <TableCell>
-                  <Badge variant={getStatusVariant(report.claim_status)}>
-                    {report.claim_status.replace('_', ' ')}
-                  </Badge>
-                </TableCell>
                 <TableCell className="capitalize">
                   {report.damage_type}
                 </TableCell>
@@ -125,25 +117,13 @@ export function ReportsTable({ reports }: ReportsTableProps) {
                   </Badge>
                 </TableCell>
                 <TableCell className="text-right">
-                  {currencySymbol}{report.estimated_total_repair_cost.toLocaleString()}
+                  {currencySymbol}{report.estimated_total_repair_cost.toLocaleString('en-US')}
                 </TableCell>
                 <TableCell className="text-right">
                   {(report.confidence_score * 100).toFixed(0)}%
                 </TableCell>
                 <TableCell>
                   {new Date(report.analysis_timestamp).toLocaleDateString('en-US')}
-                </TableCell>
-                <TableCell className="text-right">
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      router.push(`/auth/reports/${report.$id}`);
-                    }}
-                  >
-                    View
-                  </Button>
                 </TableCell>
               </TableRow>
             ))}

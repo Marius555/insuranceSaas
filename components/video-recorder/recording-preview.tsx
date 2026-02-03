@@ -38,51 +38,45 @@ export function RecordingPreview({
 
   return (
     <div className="flex flex-col h-full">
-      {/* Video preview */}
-      <div className="flex-1 flex items-center justify-center bg-black rounded-lg overflow-hidden min-h-0">
+      {/* Video preview - full width with negative margin to span edge-to-edge */}
+      <div className="flex-1 flex items-center justify-center bg-black overflow-hidden min-h-0 -mx-4 sm:-mx-6 mt-1">
         <video
           src={videoUrl}
           controls
           playsInline
-          className="max-w-full max-h-full w-auto h-auto object-contain"
+          className="w-full h-full max-h-full object-contain"
         />
       </div>
 
-      {/* File info */}
-      <div className="py-4 space-y-3">
-        <div className="flex items-center justify-between text-sm">
-          <span className="text-muted-foreground">Duration</span>
-          <span className="font-medium">{formatDuration(duration)}</span>
-        </div>
-        <div className="flex items-center justify-between text-sm">
-          <span className="text-muted-foreground">File size</span>
-          <span className={`font-medium ${isOverSize ? "text-destructive" : ""}`}>
-            {formatFileSize(videoFile.size)}
-            {isOverSize && " (exceeds 20MB)"}
+      {/* File info - compact single row */}
+      <div className="flex items-center justify-between text-sm py-3">
+        <div className="flex items-center gap-4">
+          <span className="text-muted-foreground">
+            {formatDuration(duration)} · {formatFileSize(videoFile.size)}
           </span>
+          {wasCompressed && !isCompressing && (
+            <span className="flex items-center gap-1 text-green-600">
+              <HugeiconsIcon icon={Tick02Icon} className="w-3.5 h-3.5" />
+              Compressed
+            </span>
+          )}
         </div>
-
-        {isCompressing && (
-          <div className="flex items-center gap-2 text-sm text-muted-foreground">
-            <div className="w-4 h-4 border-2 border-primary border-t-transparent rounded-full animate-spin" />
-            <span>Compressing video...</span>
-          </div>
-        )}
-
-        {wasCompressed && !isCompressing && (
-          <div className="flex items-center gap-2 text-sm text-green-600">
-            <HugeiconsIcon icon={Tick02Icon} className="w-4 h-4" />
-            <span>Video compressed successfully</span>
-          </div>
-        )}
-
-        {isOverSize && !isCompressing && (
-          <div className="flex items-center gap-2 text-sm text-destructive">
-            <HugeiconsIcon icon={Cancel01Icon} className="w-4 h-4" />
-            <span>Video is too large. Consider re-recording with shorter duration.</span>
-          </div>
-        )}
+        {isOverSize && <span className="text-destructive text-xs">Too large</span>}
       </div>
+
+      {isCompressing && (
+        <div className="flex items-center gap-2 text-sm text-muted-foreground pb-3">
+          <div className="w-4 h-4 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+          <span>Compressing video...</span>
+        </div>
+      )}
+
+      {isOverSize && !isCompressing && (
+        <div className="flex items-center gap-2 text-sm text-destructive pb-3">
+          <HugeiconsIcon icon={Cancel01Icon} className="w-4 h-4" />
+          <span>Video is too large. Consider re-recording with shorter duration.</span>
+        </div>
+      )}
 
       {/* Action buttons */}
       <div className="flex flex-col gap-3 pt-2">

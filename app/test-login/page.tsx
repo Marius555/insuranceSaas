@@ -25,11 +25,11 @@ export default async function TestLoginPage() {
   }
 
   return (
-    <>
+    <div className="animate-page-enter">
       <Header session={null} userDoc={null} />
       <main className="container mx-auto px-4 py-16">
         <TestLoginForm />
       </main>
-    </>
+    </div>
   );
 }

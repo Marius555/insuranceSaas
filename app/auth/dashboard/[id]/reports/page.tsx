@@ -19,9 +19,7 @@ import { Button } from "@/components/ui/button";
 import { FileEmpty02Icon, AttachmentIcon } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { getUserDocument } from "@/appwrite/getUserDocument";
-import { adminAction } from "@/appwrite/adminOrClient";
-import { DATABASE_ID, COLLECTION_IDS } from "@/lib/env";
-import { Query } from "node-appwrite";
+import { getReportsCached } from "@/lib/data/cached-queries";
 import type { ReportDocument } from "@/lib/types/appwrite";
 import { ReportUploadModal } from "@/components/dashboardComponents/report-upload-modal";
 import { ReportsTable } from "@/components/dashboardComponents/reports-table";
@@ -31,39 +29,24 @@ import Link from "next/link";
 export default async function ReportsListPage({ params }: { params: Promise<{ id: string }> }) {
   const { id: userId } = await params;
 
-  // Get user document for role and insurance_company_id
-  const userDoc = await getUserDocument(userId);
+  let isRegularUser = true;
+  let fetchError = false;
 
-  // Fetch reports based on role
-  const { databases } = await adminAction();
-  let reportsResult;
+  let reports: ReportDocument[];
+  try {
+    const userDoc = await getUserDocument(userId);
+    isRegularUser = userDoc?.role === 'user' || !userDoc;
 
-  if (userDoc?.role === 'insurance_adjuster' && userDoc.insurance_company_id) {
-    // Insurance company: show reports assigned to their company
-    reportsResult = await databases.listDocuments<ReportDocument>(
-      DATABASE_ID,
-      COLLECTION_IDS.REPORTS,
-      [
-        Query.equal('insurance_company_id', userDoc.insurance_company_id),
-        Query.orderDesc('$createdAt'),
-        Query.limit(50)
-      ]
+    reports = await getReportsCached(
+      userId,
+      userDoc?.role,
+      userDoc?.insurance_company_id,
     );
-  } else {
-    // Regular user: show their own reports
-    reportsResult = await databases.listDocuments<ReportDocument>(
-      DATABASE_ID,
-      COLLECTION_IDS.REPORTS,
-      [
-        Query.equal('user_id', userId),
-        Query.orderDesc('$createdAt'),
-        Query.limit(50)
-      ]
-    );
+  } catch (error) {
+    console.error('Failed to fetch reports:', error);
+    reports = [];
+    fetchError = true;
   }
-
-  const reports = reportsResult.documents;
-  const isRegularUser = userDoc?.role === 'user' || !userDoc;
 
   return (
     <SidebarInset>
@@ -91,8 +74,25 @@ export default async function ReportsListPage({ params }: { params: Promise<{ id
       </header>
 
       <div className="flex flex-1 flex-col gap-4 p-4 pt-0">
+        {/* Error state */}
+        {fetchError && (
+          <Empty>
+            <EmptyHeader className="flex flex-col gap-2">
+              <EmptyTitle>Something went wrong</EmptyTitle>
+              <EmptyDescription>
+                We couldn&apos;t load your reports. This is usually a temporary issue.
+              </EmptyDescription>
+            </EmptyHeader>
+            <div className="mt-4">
+              <Link href={`/auth/dashboard/${userId}/reports`}>
+                <Button variant="outline">Try again</Button>
+              </Link>
+            </div>
+          </Empty>
+        )}
+
         {/* Upload buttons - only for regular users */}
-        {isRegularUser && (
+        {!fetchError && isRegularUser && (
           <div className="flex gap-2">
             <FilmVideoButton />
             <ReportUploadModal>
@@ -104,7 +104,7 @@ export default async function ReportsListPage({ params }: { params: Promise<{ id
         )}
 
         {/* Empty state - when no reports */}
-        {reports.length === 0 && (
+        {!fetchError && reports.length === 0 && (
           <Empty>
             <EmptyHeader className="flex flex-col gap-2">
               <EmptyMedia variant="icon">
@@ -131,7 +131,7 @@ export default async function ReportsListPage({ params }: { params: Promise<{ id
         )}
 
         {/* Reports table - show when reports exist */}
-        {reports.length > 0 && (
+        {!fetchError && reports.length > 0 && (
           <ReportsTable reports={reports} />
         )}
       </div>

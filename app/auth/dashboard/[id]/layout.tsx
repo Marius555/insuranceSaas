@@ -27,9 +27,12 @@ export default async function DashboardLayout({ children, params }: DashboardLay
     }
   }
 
-  // Get user document (use id from URL when protection disabled)
+  // Get user document and policies in parallel
   const userId = disableProtection ? id : session!.id;
-  const userDoc = await getUserDocument(userId);
+  const [userDoc, policiesResult] = await Promise.all([
+    getUserDocument(userId),
+    getUserPolicies(userId),
+  ]);
 
   if (!disableProtection && (!userDoc || !userDoc.onboarding_completed)) {
     redirect("/");
@@ -42,8 +45,6 @@ export default async function DashboardLayout({ children, params }: DashboardLay
     role: userDoc?.role || 'user',
   };
 
-  // Fetch user policies server-side
-  const policiesResult = await getUserPolicies();
   const initialPolicies = policiesResult.success ? (policiesResult.policies || []) : [];
 
   return (

@@ -118,24 +118,10 @@ export function RecordingControls({
               <div className="w-6 h-6 rounded-sm bg-white" />
             </button>
 
-            <Button
-              variant="outline"
-              onClick={onStop}
-              className="px-6"
-            >
-              Stop
-            </Button>
+            <div className="w-[56px]" /> {/* Spacer for alignment */}
           </>
         )}
       </div>
-
-      {/* Recording indicator */}
-      {isRecording && (
-        <div className="flex items-center gap-2 text-destructive">
-          <div className="w-3 h-3 rounded-full bg-destructive animate-pulse" />
-          <span className="text-sm font-medium">Recording...</span>
-        </div>
-      )}
 
       {!isRecording && (
         <p className="text-sm text-muted-foreground text-center">

@@ -2,6 +2,7 @@
 
 import { useState, useCallback, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
+import NoSleep from "nosleep.js";
 import {
   Dialog,
   DialogContent,
@@ -24,7 +25,6 @@ import { useMotionDetection } from "@/hooks/use-motion-detection";
 import { RecordingControls } from "./recording-controls";
 import { RecordingPreview } from "./recording-preview";
 import { PolicyUploadStep, type PolicySubmission } from "./policy-upload-step";
-import { GhostFrameOverlay } from "./ghost-frame-overlay";
 import { SpeedAlert } from "./speed-alert";
 import { ProgressIndicator } from "@/components/gemini-analysis/progress-indicator";
 import {
@@ -65,6 +65,8 @@ export function VideoRecorderModal({
 
   // Lock modal type once when modal opens - use ref to prevent re-renders and mid-session changes
   const lockedIsMobileRef = useRef<boolean | null>(null);
+  // NoSleep to prevent browser idle/throttling during preview/policy states
+  const noSleepRef = useRef<NoSleep | null>(null);
   const [processedFile, setProcessedFile] = useState<File | null>(null);
   const [wasCompressed, setWasCompressed] = useState(false);
   const [uploadStep, setUploadStep] = useState(1);
@@ -173,6 +175,56 @@ export function VideoRecorderModal({
     }
   }, [isRecording, duration]);
 
+  // NoSleep: prevent mobile browser from going idle/throttling during all active modal states
+  // Uses the "NoSleep" pattern (silent video playback) which is more reliable than Wake Lock alone
+  // This prevents mobile browsers from suspending, garbage collecting, or triggering revalidation
+  useEffect(() => {
+    // Enable NoSleep for all active states to prevent mobile browser throttling
+    const shouldEnableNoSleep =
+      modalState === "ready" ||
+      modalState === "recording" ||
+      modalState === "processing" ||
+      modalState === "compressing" ||
+      modalState === "preview" ||
+      modalState === "policy-step";
+
+    const enableNoSleep = () => {
+      if (!noSleepRef.current) {
+        noSleepRef.current = new NoSleep();
+      }
+      // Enable must be called on a user gesture, but since we get here from recording
+      // which required user interaction, we should be good
+      noSleepRef.current.enable().catch((err) => {
+        console.log('NoSleep enable failed:', err);
+      });
+    };
+
+    const disableNoSleep = () => {
+      if (noSleepRef.current) {
+        noSleepRef.current.disable();
+      }
+    };
+
+    // Re-enable NoSleep when page becomes visible (handles tab switching)
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === "visible" && shouldEnableNoSleep) {
+        enableNoSleep();
+      }
+    };
+
+    if (shouldEnableNoSleep) {
+      enableNoSleep();
+      document.addEventListener("visibilitychange", handleVisibilityChange);
+    } else {
+      disableNoSleep();
+    }
+
+    return () => {
+      disableNoSleep();
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
+    };
+  }, [modalState]);
+
   const processRecordedVideo = async (file: File) => {
     if (needsCompression(file)) {
       setModalState("compressing");
@@ -186,6 +238,8 @@ export function VideoRecorderModal({
       setProcessedFile(file);
       setWasCompressed(false);
     }
+    stopCamera(); // Stop camera to free resources in preview mode
+
     setModalState("preview");
   };
 
@@ -468,7 +522,7 @@ export function VideoRecorderModal({
 
   // Shared modal body content
   const modalBody = (
-    <div className="flex-1 flex flex-col p-6 overflow-y-auto min-h-0">
+    <div className="flex-1 flex flex-col p-4 sm:p-6 overflow-y-auto min-h-0">
           {/* Permission Prompt */}
           {modalState === "permission-prompt" && (
             <div className="flex flex-col items-center justify-center h-full gap-6 text-center">
@@ -532,7 +586,7 @@ export function VideoRecorderModal({
           {(modalState === "ready" || modalState === "recording") && (
             <div className="flex flex-col h-full gap-4">
               {/* Video preview */}
-              <div className="flex-1 flex items-center justify-center bg-black rounded-lg overflow-hidden relative min-h-0">
+              <div className="flex-1 flex items-center justify-center bg-black rounded-lg overflow-hidden relative min-h-0 -mx-4 sm:mx-0 sm:rounded-lg">
                 <video
                   ref={videoRef}
                   autoPlay
@@ -549,8 +603,7 @@ export function VideoRecorderModal({
                   </div>
                 )}
 
-                {/* Forensic quality overlays */}
-                <GhostFrameOverlay isRecording={isRecording} />
+                {/* Speed alert overlay */}
                 <SpeedAlert isMovingTooFast={isMovingTooFast} isRecording={isRecording} />
               </div>
 

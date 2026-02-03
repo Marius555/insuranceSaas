@@ -85,11 +85,48 @@ export async function analyzeVideo(
           .replace(/\n?```\s*$/i, '')
           .trim();
 
+        // Check for no-vehicle indicators BEFORE parsing JSON
+        // Gemini may return text instead of JSON when it can't detect a vehicle
+        const lowerText = cleanedText.toLowerCase();
+        const isNotJsonResponse = !cleanedText.startsWith('{') && !cleanedText.startsWith('[');
+        const noVehicleIndicators = [
+          'no vehicle',
+          'cannot detect',
+          'unable to identify',
+          'no car',
+          'no automobile',
+          'does not contain a vehicle',
+          'no visible vehicle',
+          'cannot identify a vehicle',
+          'unable to detect',
+          'no damaged vehicle',
+        ];
+
+        const hasNoVehicleIndicator = noVehicleIndicators.some(indicator =>
+          lowerText.includes(indicator)
+        );
+
+        if (isNotJsonResponse || hasNoVehicleIndicator) {
+          // Return user-friendly error for no vehicle detected
+          throw new Error('NO_VEHICLE_DETECTED');
+        }
+
         try {
           analysis = JSON.parse(cleanedText);
         } catch (parseError) {
           console.error('Failed to parse JSON response:', cleanedText.substring(0, 200));
+          // Check if the text content suggests no vehicle was found
+          if (hasNoVehicleIndicator) {
+            throw new Error('NO_VEHICLE_DETECTED');
+          }
           throw new Error(`Invalid JSON response from Gemini: ${parseError instanceof Error ? parseError.message : 'Unknown error'}`);
+        }
+
+        // Validate the parsed analysis has required damage data
+        const parsedAnalysis = analysis as AutoDamageAnalysis;
+        if (!parsedAnalysis.damagedParts || parsedAnalysis.damagedParts.length === 0) {
+          // No damage parts found - could be no visible damage or no vehicle
+          throw new Error('NO_DAMAGE_DETECTED');
         }
       } else {
         analysis = text;
@@ -141,6 +178,22 @@ export async function analyzeVideo(
     };
   } catch (error: unknown) {
     console.error("❌ Video analysis error:", error);
+
+    // Handle specific error types with user-friendly messages
+    if (error instanceof Error) {
+      if (error.message === 'NO_VEHICLE_DETECTED') {
+        return {
+          success: false,
+          message: 'No vehicle detected in the video. Please record a video that clearly shows the damaged vehicle.',
+        };
+      }
+      if (error.message === 'NO_DAMAGE_DETECTED') {
+        return {
+          success: false,
+          message: 'Unable to identify vehicle damage. Please ensure the damage is clearly visible in the recording.',
+        };
+      }
+    }
 
     return {
       success: false,

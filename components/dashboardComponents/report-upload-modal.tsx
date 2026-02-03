@@ -34,7 +34,7 @@ export function ReportUploadModal({ children }: ReportUploadModalProps) {
         {children}
       </DialogTrigger>
 
-      <DialogContent className="max-w-4xl h-[85vh] flex flex-col">
+      <DialogContent className="max-w-4xl h-[80vh] flex flex-col">
         <DialogHeader>
           <DialogTitle>Submit Report</DialogTitle>
         </DialogHeader>
@@ -45,11 +45,11 @@ export function ReportUploadModal({ children }: ReportUploadModalProps) {
             <TabsTrigger value="policy">Policy Analysis</TabsTrigger>
           </TabsList>
 
-          <TabsContent value="quick" className="flex-1 overflow-y-auto m-0 data-[state=active]:flex data-[state=active]:flex-col">
+          <TabsContent value="quick" className="flex-1 overflow-y-auto mt-4 mx-0 mb-0 data-[state=active]:flex data-[state=active]:flex-col">
             <QuickAnalysisTabContent onSuccess={handleSuccess} />
           </TabsContent>
 
-          <TabsContent value="policy" className="flex-1 overflow-y-auto m-0 data-[state=active]:flex data-[state=active]:flex-col">
+          <TabsContent value="policy" className="flex-1 overflow-y-auto mt-4 mx-0 mb-0 data-[state=active]:flex data-[state=active]:flex-col">
             <PolicyAnalysisTabContent onSuccess={handleSuccess} />
           </TabsContent>
         </Tabs>

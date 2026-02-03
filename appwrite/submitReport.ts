@@ -430,14 +430,13 @@ function convertToEnhancedAnalysis(
     damageType: 'unknown', // Will be manually reviewed
     damageCause: 'Unknown - requires manual review',
 
-    // Vehicle verification - insufficient data without policy
     vehicleVerification: {
       videoVehicle: {
         licensePlate: null,
         vin: null,
         make: null,
         model: null,
-        year: 0, // ✅ Changed from null to 0 for numeric field
+        year: 0,
         color: null,
       },
       policyVehicle: {
@@ -445,7 +444,7 @@ function convertToEnhancedAnalysis(
         vin: null,
         make: null,
         model: null,
-        year: 0, // ✅ Changed from null to 0 for numeric field
+        year: 0,
         color: null,
       },
       verificationStatus: 'insufficient_data',

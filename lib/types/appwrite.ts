@@ -310,6 +310,17 @@ export function parseAuditLogMetadata(log: AuditLogDocument): Record<string, any
 }
 
 /**
+ * Information about a previously uploaded policy
+ */
+export interface PolicyInfo {
+  fileId: string;
+  filename: string;
+  size: number;
+  uploadedAt: string;
+  url: string;
+}
+
+/**
  * File upload result from Appwrite Storage
  * Represents a successfully uploaded file with metadata
  */

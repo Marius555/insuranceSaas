@@ -2,6 +2,7 @@
 
 import { submitReport } from '@/appwrite/submitReport';
 import { getSession } from '@/appwrite/getSession';
+import { revalidatePath, revalidateTag } from 'next/cache';
 
 /**
  * Server Action to submit report from analysis page
@@ -79,9 +80,8 @@ export async function submitReportAction(formData: FormData) {
   if (videoQualityMetadata) {
     console.log(`   Video Quality: ${videoQualityMetadata.resolution}, ${videoQualityMetadata.qualitySeconds}s stable footage`);
   }
-
   // Call submitReport with userId
-  return await submitReport({
+  const result = await submitReport({
     userId,
     insuranceCompanyId: insuranceCompanyId || undefined,
     mediaFiles,
@@ -93,4 +93,17 @@ export async function submitReportAction(formData: FormData) {
     userCurrencySymbol: userCurrencySymbol || undefined,
     videoQualityMetadata,
   });
+
+  // Bust Router Cache + Data Cache so the user sees their new report immediately
+  if (result.success) {
+    revalidatePath(`/auth/dashboard/${userId}/reports`);
+    revalidatePath(`/auth/dashboard/${userId}`);
+    revalidateTag(`reports-${userId}`, { expire: 0 });
+    revalidateTag(`policies-${userId}`, { expire: 0 });
+    if (insuranceCompanyId) {
+      revalidateTag(`reports-company-${insuranceCompanyId}`, { expire: 0 });
+    }
+  }
+
+  return result;
 }
