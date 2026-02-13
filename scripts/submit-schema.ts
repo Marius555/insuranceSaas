@@ -265,6 +265,8 @@ async function createAttributes(
       // Check if attribute already exists
       if (error.code === 409) {
         console.log(`  → Attribute '${attr.key}' already exists`);
+      } else if (error.code === 400 && error.type === 'attribute_limit_exceeded') {
+        console.warn(`  ⚠ Attribute '${attr.key}' skipped: collection attribute limit reached`);
       } else {
         throw error;
       }

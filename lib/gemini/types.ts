@@ -144,6 +144,13 @@ export interface DamagedPart {
   preExisting?: boolean;
 }
 
+export interface InferredDamage {
+  component: string;
+  likelihood: 'high' | 'medium' | 'low';
+  description: string;
+  basedOn: string;
+}
+
 // ========================================
 // Fraud Detection Types - Damage Age Assessment
 // ========================================
@@ -222,6 +229,7 @@ export interface PreExistingDamageAssessment {
 
 export interface AutoDamageAnalysis {
   damagedParts: DamagedPart[];
+  inferredInternalDamages?: InferredDamage[];
   overallSeverity: 'minor' | 'moderate' | 'severe' | 'total_loss';
   estimatedRepairComplexity: 'simple' | 'moderate' | 'complex' | 'extensive';
   safetyConcerns: string[];

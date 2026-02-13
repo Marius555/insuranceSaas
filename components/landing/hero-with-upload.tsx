@@ -78,7 +78,7 @@ export function HeroWithUpload({ session }: HeroWithUploadProps) {
 
   return (
     <>
-      <section className="relative">
+      <section className="relative min-h-[calc(100vh-4rem)] md:min-h-[calc(100vh-5rem)] flex items-center justify-center">
         {/* Full-width grid background */}
         <div
           className="absolute inset-0 bg-grid"
@@ -88,7 +88,7 @@ export function HeroWithUpload({ session }: HeroWithUploadProps) {
           }}
         />
         {/* Centered content */}
-        <div className="relative max-w-4xl mx-auto px-4 py-24 md:py-32">
+        <div className="relative max-w-4xl mx-auto px-4 py-12">
           <div className="flex flex-col items-center text-center space-y-8">
 
           <div className="space-y-6">
@@ -110,14 +110,15 @@ export function HeroWithUpload({ session }: HeroWithUploadProps) {
               size="lg"
               className="text-lg px-8 py-6"
             >
-              <HugeiconsIcon icon={UserCircleIcon} /> Check Your Car
+              <HugeiconsIcon icon={UserCircleIcon} strokeWidth={2.5} /> Check Your Car
             </Button>
             <Button
               onClick={handleInsuranceClick}
               size="lg"
               className="text-lg px-8 py-6 "
+              variant="outline"
             >
-              <HugeiconsIcon icon={Building06Icon} /> For Insurance Companies
+              <HugeiconsIcon icon={Building06Icon} strokeWidth={2.5} /> For Insurance Companies
             </Button>
           </div>
 

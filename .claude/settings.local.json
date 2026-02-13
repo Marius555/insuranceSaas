@@ -36,7 +36,16 @@
       "WebFetch(domain:github.com)",
       "Bash(npm view:*)",
       "Bash(npm uninstall:*)",
-      "Bash(del \"C:\\\\Users\\\\wanma\\\\OneDrive - Dalo6116\\\\Desktop\\\\websites\\\\insurance\\\\hooks\\\\use-mobile.ts\")"
+      "Bash(del \"C:\\\\Users\\\\wanma\\\\OneDrive - Dalo6116\\\\Desktop\\\\websites\\\\insurance\\\\hooks\\\\use-mobile.ts\")",
+      "Bash(npx next lint:*)",
+      "Bash(npm run lint:*)",
+      "Bash(npx eslint:*)",
+      "WebFetch(domain:raw.githubusercontent.com)",
+      "WebFetch(domain:ui.shadcn.com)",
+      "WebFetch(domain:vaul.emilkowal.ski)",
+      "Bash(npm run schema:submit:*)",
+      "Bash(ls:*)",
+      "WebFetch(domain:www.anthropic.com)"
     ]
   }
 }

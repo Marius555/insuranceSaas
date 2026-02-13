@@ -27,7 +27,7 @@ export function ProgressIndicator({
   steps = defaultSteps,
 }: ProgressIndicatorProps) {
   return (
-    <div className="w-full flex justify-center py-6">
+    <div className="w-full flex justify-center py-3">
       {/* Vertical Stepper */}
       <div className="relative w-full max-w-md">
         {steps.map((step, index) => {
@@ -37,10 +37,10 @@ export function ProgressIndicator({
           const isLast = index === steps.length - 1;
 
           return (
-            <div key={step.id} className="relative pb-8 last:pb-0">
+            <div key={step.id} className="relative pb-5 last:pb-0">
               {/* Vertical Line */}
               {!isLast && (
-                <div className="absolute left-5 top-10 bottom-0 w-0.5 bg-border">
+                <div className="absolute left-4 top-8 bottom-0 w-0.5 bg-border">
                   <div
                     className={cn(
                       "w-full bg-primary transition-all duration-500",
@@ -55,7 +55,7 @@ export function ProgressIndicator({
                 {/* Step Circle */}
                 <div
                   className={cn(
-                    "flex-shrink-0 w-10 h-10 rounded-full flex items-center justify-center border-2 transition-all duration-300 bg-background z-10",
+                    "flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center border-2 transition-all duration-300 bg-background z-10",
                     isComplete && "border-primary bg-primary text-primary-foreground",
                     isCurrent && "border-primary bg-background text-primary animate-pulse",
                     isPending && "border-border text-muted-foreground"
@@ -63,7 +63,7 @@ export function ProgressIndicator({
                 >
                   {isComplete ? (
                     <svg
-                      className="w-5 h-5"
+                      className="w-4 h-4"
                       fill="none"
                       viewBox="0 0 24 24"
                       strokeWidth={3}

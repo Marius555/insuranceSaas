@@ -19,6 +19,7 @@ import {
 } from "@hugeicons/core-free-icons"
 
 import * as React from "react"
+import { useMounted } from "@/hooks/use-mounted"
 
 import { NavSecondary } from "./nav-secondary"
 import { FeedbackModal } from "./feedback-modal"
@@ -29,7 +30,6 @@ import {
   DropdownMenuContent,
   DropdownMenuGroup,
   DropdownMenuItem,
-  DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
@@ -50,12 +50,8 @@ import {
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   const pathname = usePathname()
   const { isMobile, setOpenMobile } = useSidebar()
-  const { userId, email: userEmail, role: userRole } = useUser()
-  const [mounted, setMounted] = React.useState(false)
-
-  React.useEffect(() => {
-    setMounted(true)
-  }, [])
+  const { userId, email: userEmail, role: userRole, pricingPlan, evaluationTimes } = useUser()
+  const mounted = useMounted()
 
   const navItems = [
     {
@@ -67,6 +63,11 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
       title: "Reports",
       url: `/auth/dashboard/${userId}/reports`,
       icon: FileValidationIcon,
+    },
+    {
+      title: "Notifications",
+      url: `/auth/dashboard/${userId}/notifications`,
+      icon: Notification01Icon,
     },
     {
       title: "Settings",
@@ -94,7 +95,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
       <div className="grid flex-1 text-left text-sm leading-tight">
         <span className="truncate font-medium">{userEmail || 'User'}</span>
         <span className="truncate text-xs">
-          {userRole === 'insurance_adjuster' ? 'Insurance Company' : 'User'}
+          {pricingPlan.charAt(0).toUpperCase() + pricingPlan.slice(1)} · {evaluationTimes} evals remaining
         </span>
       </div>
       <HugeiconsIcon icon={UnfoldMoreIcon} className="ml-auto" />
@@ -122,27 +123,33 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                   align="start"
                   sideOffset={4}
                 >
-                  <DropdownMenuLabel>{userEmail || 'User'}</DropdownMenuLabel>
-                  <DropdownMenuSeparator />
                   <DropdownMenuGroup>
-                    <DropdownMenuItem>
-                      <HugeiconsIcon icon={SparklesIcon} />
-                      Upgrade to Pro
+                    <DropdownMenuItem asChild>
+                      <Link href="/pricing">
+                        <HugeiconsIcon icon={SparklesIcon} />
+                        Upgrade to Pro
+                      </Link>
                     </DropdownMenuItem>
                   </DropdownMenuGroup>
                   <DropdownMenuSeparator />
                   <DropdownMenuGroup>
-                    <DropdownMenuItem>
-                      <HugeiconsIcon icon={CheckmarkBadge01Icon} />
-                      Account
+                    <DropdownMenuItem asChild>
+                      <Link href={`/auth/dashboard/${userId}/settings/account`}>
+                        <HugeiconsIcon icon={CheckmarkBadge01Icon} />
+                        Account
+                      </Link>
                     </DropdownMenuItem>
-                    <DropdownMenuItem>
-                      <HugeiconsIcon icon={CreditCardIcon} />
-                      Billing
+                    <DropdownMenuItem asChild>
+                      <Link href={`/auth/dashboard/${userId}/settings/billing`}>
+                        <HugeiconsIcon icon={CreditCardIcon} />
+                        Billing
+                      </Link>
                     </DropdownMenuItem>
-                    <DropdownMenuItem>
-                      <HugeiconsIcon icon={Notification01Icon} />
-                      Notifications
+                    <DropdownMenuItem asChild>
+                      <Link href={`/auth/dashboard/${userId}/notifications`}>
+                        <HugeiconsIcon icon={Notification01Icon} />
+                        Notifications
+                      </Link>
                     </DropdownMenuItem>
                   </DropdownMenuGroup>
                   <DropdownMenuSeparator />
@@ -174,7 +181,9 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
             <SidebarMenu>
               {navItems.map((item) => {
                 const isActive = pathname === item.url ||
-                  (item.url.endsWith('/reports') && pathname?.startsWith(item.url))
+                  (item.url.endsWith('/reports') && pathname?.startsWith(item.url)) ||
+                  (item.url.endsWith('/settings') && pathname?.startsWith(item.url)) ||
+                  (item.url.endsWith('/notifications') && pathname?.startsWith(item.url))
                 return (
                   <SidebarMenuItem key={item.title}>
                     <SidebarMenuButton asChild isActive={isActive}>

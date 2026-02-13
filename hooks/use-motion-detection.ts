@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useEffect, useCallback, useRef, startTransition } from "react";
 
 interface UseMotionDetectionOptions {
   threshold?: number; // m/s^2, default 15
@@ -33,22 +33,24 @@ export function useMotionDetection(
 
   // Check if DeviceMotionEvent is supported
   useEffect(() => {
-    if (typeof window !== "undefined" && "DeviceMotionEvent" in window) {
-      setIsSupported(true);
+    startTransition(() => {
+      if (typeof window !== "undefined" && "DeviceMotionEvent" in window) {
+        setIsSupported(true);
 
-      // Check if permission API exists (iOS 13+)
-      if (
-        typeof (DeviceMotionEvent as any).requestPermission === "function"
-      ) {
-        setPermissionState("prompt");
+        // Check if permission API exists (iOS 13+)
+        if (
+          typeof (DeviceMotionEvent as any).requestPermission === "function"
+        ) {
+          setPermissionState("prompt");
+        } else {
+          // No permission needed (Android, older iOS)
+          setPermissionState("granted");
+        }
       } else {
-        // No permission needed (Android, older iOS)
-        setPermissionState("granted");
+        setIsSupported(false);
+        setPermissionState("unavailable");
       }
-    } else {
-      setIsSupported(false);
-      setPermissionState("unavailable");
-    }
+    });
   }, []);
 
   const handleMotion = useCallback(

@@ -3,7 +3,6 @@ import {
   SparklesIcon,
   FileValidationIcon,
   Shield01Icon,
-  LockIcon,
 } from "@hugeicons/core-free-icons";
 import { Card, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 
@@ -12,7 +11,7 @@ const features = [
     icon: SparklesIcon,
     title: "AI-Powered Damage Analysis",
     description:
-      "Upload videos or images for instant damage detection powered by Gemini 2.5 Flash. Identifies all damaged parts with severity ratings.",
+      "Upload videos or images for instant damage detection powered by our Custom AI model. Identifies all damaged parts with severity ratings.",
   },
   {
     icon: FileValidationIcon,
@@ -38,17 +37,12 @@ const features = [
     description:
       "Process claims remotely in minutes. No need to schedule in-person assessments or wait for specialists.",
   },
-  {
-    icon: LockIcon,
-    title: "Enterprise Security",
-    description:
-      "Prompt injection scanning, audit logs, encrypted storage. Built for insurance compliance requirements.",
-  },
 ];
 
 export function Features() {
   return (
-    <section id="features" className="max-w-7xl mx-auto px-4 py-16 md:py-24">
+    <section id="features" className="min-h-screen flex items-center">
+      <div className="max-w-7xl mx-auto px-4 py-16 w-full">
       <div className="text-center mb-16 space-y-4">
         <h2 className="text-3xl md:text-4xl font-bold">
           Complete Claim Assessment Platform
@@ -75,6 +69,7 @@ export function Features() {
             </CardHeader>
           </Card>
         ))}
+      </div>
       </div>
     </section>
   );

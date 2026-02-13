@@ -16,14 +16,13 @@ import {
   EmptyTitle,
 } from "@/components/ui/empty";
 import { Button } from "@/components/ui/button";
-import { FileEmpty02Icon, AttachmentIcon } from "@hugeicons/core-free-icons";
+import { FileEmpty02Icon } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { getUserDocument } from "@/appwrite/getUserDocument";
 import { getReportsCached } from "@/lib/data/cached-queries";
 import type { ReportDocument } from "@/lib/types/appwrite";
-import { ReportUploadModal } from "@/components/dashboardComponents/report-upload-modal";
-import { ReportsTable } from "@/components/dashboardComponents/reports-table";
-import { FilmVideoButton } from "@/components/dashboardComponents/film-video-button";
+import { ReportsListClient } from "@/components/dashboardComponents/reports-list-client";
+import { NotificationBell } from "@/components/notifications/notification-bell";
 import Link from "next/link";
 
 export default async function ReportsListPage({ params }: { params: Promise<{ id: string }> }) {
@@ -51,7 +50,7 @@ export default async function ReportsListPage({ params }: { params: Promise<{ id
   return (
     <SidebarInset>
       <header className="flex h-16 shrink-0 items-center gap-2">
-        <div className="flex items-center gap-2 px-4">
+        <div className="flex items-center gap-2 px-4 flex-1">
           <SidebarTrigger className="-ml-1" />
           <Separator
             orientation="vertical"
@@ -71,6 +70,9 @@ export default async function ReportsListPage({ params }: { params: Promise<{ id
             </BreadcrumbList>
           </Breadcrumb>
         </div>
+        <div className="pr-4">
+          <NotificationBell />
+        </div>
       </header>
 
       <div className="flex flex-1 flex-col gap-4 p-4 pt-0">
@@ -89,18 +91,6 @@ export default async function ReportsListPage({ params }: { params: Promise<{ id
               </Link>
             </div>
           </Empty>
-        )}
-
-        {/* Upload buttons - only for regular users */}
-        {!fetchError && isRegularUser && (
-          <div className="flex gap-2">
-            <FilmVideoButton />
-            <ReportUploadModal>
-              <Button variant="secondary">
-                <HugeiconsIcon icon={AttachmentIcon} /> Upload video
-              </Button>
-            </ReportUploadModal>
-          </div>
         )}
 
         {/* Empty state - when no reports */}
@@ -130,9 +120,9 @@ export default async function ReportsListPage({ params }: { params: Promise<{ id
           </Empty>
         )}
 
-        {/* Reports table - show when reports exist */}
+        {/* Reports list with search, sort, and pagination */}
         {!fetchError && reports.length > 0 && (
-          <ReportsTable reports={reports} />
+          <ReportsListClient reports={reports} />
         )}
       </div>
     </SidebarInset>

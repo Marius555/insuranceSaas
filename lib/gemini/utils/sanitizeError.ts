@@ -102,3 +102,26 @@ export function isRateLimitError(error: unknown): boolean {
 
   return false;
 }
+
+/**
+ * Checks if an error is retryable (rate limit OR transient parsing errors)
+ * Includes JSON truncation errors which often succeed on retry with different model
+ *
+ * @param error - The error to check
+ * @returns true if error should trigger model fallback
+ */
+export function isRetryableError(error: unknown): boolean {
+  // Rate limit errors are always retryable
+  if (isRateLimitError(error)) return true;
+
+  // Check for JSON parsing/truncation errors (transient, often succeed on retry)
+  const message = error instanceof Error ? error.message.toLowerCase() : String(error).toLowerCase();
+  const jsonErrorPatterns = [
+    'unterminated string',
+    'unexpected end of json',
+    'invalid json response',
+    'truncated',
+  ];
+
+  return jsonErrorPatterns.some(pattern => message.includes(pattern));
+}

@@ -7,6 +7,7 @@ import type { FeedbackDocument } from '@/lib/types/appwrite';
 
 export interface CreateFeedbackInput {
   user_id: string;
+  report_id?: string;
   category: 'bug_report' | 'feature_request' | 'general' | 'complaint';
   rating: number;
   feedback_text: string;
@@ -34,6 +35,7 @@ export async function createFeedback(input: CreateFeedbackInput): Promise<Create
       ID.unique(),
       {
         user_id: input.user_id,
+        ...(input.report_id ? { report_id: input.report_id } : {}),
         category: input.category,
         rating: input.rating,
         feedback_text: input.feedback_text,

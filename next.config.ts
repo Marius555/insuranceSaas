@@ -1,6 +1,14 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
+  images: {
+    remotePatterns: [
+      {
+        protocol: 'https',
+        hostname: '*.cloud.appwrite.io',
+      },
+    ],
+  },
   allowedDevOrigins: [
     '192.168.32.186:3000',
     '192.168.32.186',
@@ -14,6 +22,7 @@ const nextConfig: NextConfig = {
     serverActions: {
       bodySizeLimit: '30mb', // Allow up to 30MB for video uploads (20MB file → ~27MB base64)
     },
+    proxyClientMaxBodySize: '30mb', // Match server action limit for video uploads
   },
 };
 

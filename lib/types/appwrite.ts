@@ -13,6 +13,16 @@ export interface UserDocument extends Models.Document {
   role: 'user' | 'admin' | 'insurance_adjuster';
   insurance_company_id?: string;
   onboarding_completed: boolean;
+  email_notifications?: boolean;
+  push_notifications?: boolean;
+  language?: string;
+  profile_visibility?: 'public' | 'private';
+  data_sharing?: boolean;
+  analytics_enabled?: boolean;
+  activity_status?: boolean;
+  pricing_plan?: 'free' | 'pro' | 'max';
+  evaluation_times?: number;
+  evaluation_reset_date?: string;
 }
 
 // Insurance Companies Collection
@@ -136,6 +146,9 @@ export interface ReportDamageDetailDocument extends Models.Document {
   description: string;
   estimated_repair_cost?: string; // e.g., "$500 - $800"
   sort_order: number;
+  is_inferred?: boolean;
+  inferred_likelihood?: string;
+  inferred_based_on?: string;
 }
 
 // Report Vehicle Verification Collection (One-to-One)
@@ -214,9 +227,32 @@ export interface AuditLogDocument extends Models.Document {
   metadata?: string; // JSON object
 }
 
+// Notifications Collection
+export interface NotificationDocument extends Models.Document {
+  user_id: string;
+  title: string;
+  message: string;
+  type: 'report_completed' | 'report_updated' | 'system' | 'info';
+  is_read: boolean;
+  link?: string;
+  report_id?: string;
+}
+
+// News Posts Collection
+export interface NewsPostDocument extends Models.Document {
+  author_id: string;
+  title: string;
+  body: string;
+  excerpt?: string;
+  cover_image_id?: string;
+  is_published: boolean;
+  published_at?: string;
+}
+
 // Feedback Collection
 export interface FeedbackDocument extends Models.Document {
   user_id: string;
+  report_id?: string;
   category: 'bug_report' | 'feature_request' | 'general' | 'complaint';
   rating: number;
   feedback_text: string;

@@ -7,7 +7,7 @@ import { isAppwriteClient } from "@/lib/types/appwrite";
 import { withRetry } from "@/lib/utils/retry";
 import { DATABASE_ID, COLLECTION_IDS, STORAGE_BUCKET_ID } from "@/lib/env";
 import { Query } from "node-appwrite";
-import type { UserDocument, ReportDocument, PolicyInfo } from "@/lib/types/appwrite";
+import type { UserDocument, ReportDocument, PolicyInfo, NotificationDocument, NewsPostDocument } from "@/lib/types/appwrite";
 
 interface SessionUser {
   id: string;
@@ -247,4 +247,114 @@ export const getUserPoliciesCached = cache((userId: string) =>
     tags: [`policies-${userId}`],
     revalidate: 60,
   })(userId)
+);
+
+/**
+ * Cross-request cached notifications.
+ * Returns recent notifications and unread count for a user.
+ */
+async function _fetchNotifications(
+  userId: string
+): Promise<{ notifications: NotificationDocument[]; unreadCount: number }> {
+  try {
+    const { databases } = await adminAction();
+
+    const result = await databases.listDocuments<NotificationDocument>(
+      DATABASE_ID,
+      COLLECTION_IDS.NOTIFICATIONS,
+      [
+        Query.equal('user_id', userId),
+        Query.orderDesc('$createdAt'),
+        Query.limit(20),
+      ]
+    );
+
+    const unreadResult = await databases.listDocuments<NotificationDocument>(
+      DATABASE_ID,
+      COLLECTION_IDS.NOTIFICATIONS,
+      [
+        Query.equal('user_id', userId),
+        Query.equal('is_read', false),
+        Query.limit(1),
+        Query.select(['$id']),
+      ]
+    );
+
+    return {
+      notifications: result.documents,
+      unreadCount: unreadResult.total,
+    };
+  } catch (error) {
+    console.error('Failed to fetch notifications:', error);
+    return { notifications: [], unreadCount: 0 };
+  }
+}
+
+export const getNotificationsCached = cache((userId: string) =>
+  unstable_cache(_fetchNotifications, [`notifications-${userId}`], {
+    tags: [`notifications-${userId}`],
+    revalidate: 30,
+  })(userId)
+);
+
+/**
+ * Cross-request cached news posts listing.
+ * Returns all published posts ordered by published_at DESC.
+ */
+async function _fetchNewsPosts(): Promise<NewsPostDocument[]> {
+  try {
+    const { databases } = await adminAction();
+
+    const result = await databases.listDocuments<NewsPostDocument>(
+      DATABASE_ID,
+      COLLECTION_IDS.NEWS_POSTS,
+      [
+        Query.equal('is_published', true),
+        Query.orderDesc('published_at'),
+        Query.limit(50),
+      ]
+    );
+    return result.documents;
+  } catch (error) {
+    console.error('Failed to fetch news posts:', error);
+    return [];
+  }
+}
+
+export const getNewsPostsCached = cache(() =>
+  unstable_cache(_fetchNewsPosts, ['news-posts'], {
+    tags: ['news-posts'],
+    revalidate: 60,
+  })()
+);
+
+/**
+ * Cross-request cached single news post.
+ * Returns null if not published or not found.
+ */
+async function _fetchNewsPost(postId: string): Promise<NewsPostDocument | null> {
+  try {
+    const { databases } = await adminAction();
+
+    const post = await databases.getDocument<NewsPostDocument>(
+      DATABASE_ID,
+      COLLECTION_IDS.NEWS_POSTS,
+      postId
+    );
+
+    return post;
+  } catch (error: any) {
+    if (error.code === 404) {
+      return null;
+    }
+    console.error('Failed to fetch news post:', error);
+    return null;
+  }
+}
+
+export const getNewsPostCached = cache((postId: string) =>
+  unstable_cache(_fetchNewsPost, [`news-post-${postId}`], {
+    tags: ['news-posts', `news-post-${postId}`],
+    revalidate: 60,
+  })(postId)
 );

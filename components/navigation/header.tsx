@@ -1,19 +1,13 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import Link from "next/link";
+import { useMounted } from "@/hooks/use-mounted";
 import { useTheme } from "next-themes";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { Menu01Icon, MultiplicationSignIcon, Shield01Icon, Sun03Icon, Moon02Icon } from "@hugeicons/core-free-icons";
 import { Button } from "@/components/ui/button";
 import { GoogleSignInModal } from "@/components/auth/google-signin-modal";
-import {
-  NavigationMenu,
-  NavigationMenuContent,
-  NavigationMenuItem,
-  NavigationMenuList,
-  NavigationMenuTrigger,
-} from "@/components/ui/navigation-menu";
 import type { UserDocument } from "@/lib/types/appwrite";
 
 interface HeaderProps {
@@ -24,12 +18,8 @@ interface HeaderProps {
 export function Header({ session, userDoc }: HeaderProps) {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [showSignInModal, setShowSignInModal] = useState(false);
-  const [mounted, setMounted] = useState(false);
+  const mounted = useMounted();
   const { theme, setTheme } = useTheme();
-
-  useEffect(() => {
-    queueMicrotask(() => setMounted(true));
-  }, []);
 
   const scrollToSection = (id: string) => {
     const element = document.getElementById(id);
@@ -44,7 +34,7 @@ export function Header({ session, userDoc }: HeaderProps) {
   };
 
   return (
-    <header className="sticky top-0 z-50 w-full bg-background">
+    <header className="static top-0 z-50 w-full bg-background">
       <div className="container mx-auto flex h-16 md:h-20 items-center justify-between px-4">
         {/* Logo */}
         <Link href="/" className="flex items-center gap-2">
@@ -53,26 +43,32 @@ export function Header({ session, userDoc }: HeaderProps) {
         </Link>
 
         {/* Desktop Navigation */}
-        <NavigationMenu className="hidden md:flex">
-          <NavigationMenuList>
-            <NavigationMenuItem>
-              <NavigationMenuTrigger>Products</NavigationMenuTrigger>
-              <NavigationMenuContent>
-                <div className="w-[200px] p-2">
-                  {/* Menu items to be added later */}
-                </div>
-              </NavigationMenuContent>
-            </NavigationMenuItem>
-            <NavigationMenuItem>
-              <NavigationMenuTrigger>Solutions</NavigationMenuTrigger>
-              <NavigationMenuContent>
-                <div className="w-[200px] p-2">
-                  {/* Menu items to be added later */}
-                </div>
-              </NavigationMenuContent>
-            </NavigationMenuItem>
-          </NavigationMenuList>
-        </NavigationMenu>
+        <nav className="hidden md:flex items-center gap-6">
+          <button
+            onClick={() => scrollToSection("features")}
+            className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
+          >
+            Features
+          </button>
+          <button
+            onClick={() => scrollToSection("how-it-works")}
+            className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
+          >
+            How It Works
+          </button>
+          <Link
+            href="/pricing"
+            className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
+          >
+            Pricing
+          </Link>
+          <Link
+            href="/news"
+            className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
+          >
+            News
+          </Link>
+        </nav>
 
         {/* Desktop Auth CTAs */}
         <div className="hidden md:flex items-center gap-3">
@@ -116,17 +112,9 @@ export function Header({ session, userDoc }: HeaderProps) {
               </Button>
             </form>
           ) : (
-            <>
-              <Link href="/test-login" className="text-sm text-muted-foreground hover:text-foreground">
-                Test Login
-              </Link>
-              <Link href="/test-signup" className="text-sm text-muted-foreground hover:text-foreground">
-                Test Signup
-              </Link>
-              <Button onClick={() => setShowSignInModal(true)}>
-                Sign In
-              </Button>
-            </>
+            <Button onClick={() => setShowSignInModal(true)}>
+              Sign In
+            </Button>
           )}
         </div>
 
@@ -160,6 +148,20 @@ export function Header({ session, userDoc }: HeaderProps) {
             >
               How It Works
             </button>
+            <Link
+              href="/pricing"
+              className="text-sm font-medium text-muted-foreground text-left py-2"
+              onClick={() => setMobileMenuOpen(false)}
+            >
+              Pricing
+            </Link>
+            <Link
+              href="/news"
+              className="text-sm font-medium text-muted-foreground text-left py-2"
+              onClick={() => setMobileMenuOpen(false)}
+            >
+              News
+            </Link>
             <div className="border-t border-border pt-4 flex flex-col gap-2">
               {session && userDoc ? (
                 <>
@@ -189,27 +191,15 @@ export function Header({ session, userDoc }: HeaderProps) {
                   </Button>
                 </form>
               ) : (
-                <>
-                  <Link href="/test-login" onClick={() => setMobileMenuOpen(false)}>
-                    <Button variant="ghost" className="w-full justify-start text-muted-foreground">
-                      Test Login
-                    </Button>
-                  </Link>
-                  <Link href="/test-signup" onClick={() => setMobileMenuOpen(false)}>
-                    <Button variant="ghost" className="w-full justify-start text-muted-foreground">
-                      Test Signup
-                    </Button>
-                  </Link>
-                  <Button
-                    onClick={() => {
-                      setShowSignInModal(true);
-                      setMobileMenuOpen(false);
-                    }}
-                    className="w-full"
-                  >
-                    Sign In
-                  </Button>
-                </>
+                <Button
+                  onClick={() => {
+                    setShowSignInModal(true);
+                    setMobileMenuOpen(false);
+                  }}
+                  className="w-full"
+                >
+                  Sign In
+                </Button>
               )}
             </div>
           </nav>

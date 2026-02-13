@@ -1,12 +1,14 @@
 import { notFound, redirect } from 'next/navigation';
 import { getSession } from '@/appwrite/getSession';
 import { getReportById } from '@/appwrite/getReport';
+import { getUserDocumentCached } from '@/lib/data/cached-queries';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { CurrencyAmount } from '@/components/ui/currency-amount';
 import { HugeiconsIcon } from '@hugeicons/react';
-import { Image01Icon, File01Icon } from '@hugeicons/core-free-icons';
+import { Image01Icon, File01Icon, AlertCircleIcon } from '@hugeicons/core-free-icons';
 import { ReportActions } from './report-actions';
+import { ReportFeedbackButton } from './report-feedback-button';
 import {
   Breadcrumb,
   BreadcrumbItem,
@@ -20,6 +22,7 @@ import {
   SidebarInset,
   SidebarTrigger,
 } from "@/components/ui/sidebar";
+import { NotificationBell } from "@/components/notifications/notification-bell";
 
 interface ReportPageProps {
   params: Promise<{ id: string }>;
@@ -39,7 +42,10 @@ export default async function ReportPage({ params }: ReportPageProps) {
     notFound();
   }
 
-  const { report, damageDetails, vehicleVerification, assessment, mediaFiles, policyFile } = reportResult.data;
+  const { report, damageDetails: allDamageDetails, vehicleVerification, assessment, mediaFiles, policyFile } = reportResult.data;
+
+  const visibleDamages = allDamageDetails.filter(d => !d.is_inferred);
+  const inferredDamages = allDamageDetails.filter(d => d.is_inferred);
 
   const isOwner = report.user_id === session.id;
   const isPublic = report.is_public;
@@ -47,6 +53,10 @@ export default async function ReportPage({ params }: ReportPageProps) {
   if (!isOwner && !isPublic) {
     redirect('/?error=unauthorized');
   }
+
+  // Fetch user document to check role for download permissions
+  const userDoc = await getUserDocumentCached(session.id);
+  const canDownloadFiles = userDoc?.role === 'insurance_adjuster' || userDoc?.role === 'admin';
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -78,6 +88,19 @@ export default async function ReportPage({ params }: ReportPageProps) {
     }
   };
 
+  const getLikelihoodColor = (likelihood: string) => {
+    switch (likelihood) {
+      case 'high':
+        return 'bg-orange-100 text-orange-800 dark:bg-orange-900/50 dark:text-orange-300';
+      case 'medium':
+        return 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/50 dark:text-yellow-300';
+      case 'low':
+        return 'bg-muted text-muted-foreground';
+      default:
+        return 'bg-muted text-muted-foreground';
+    }
+  };
+
   const getVerificationColor = (status: string) => {
     switch (status) {
       case 'matched':
@@ -96,7 +119,7 @@ export default async function ReportPage({ params }: ReportPageProps) {
   return (
     <SidebarInset>
         <header className="flex h-16 shrink-0 items-center gap-2">
-          <div className="flex items-center gap-2 px-4">
+          <div className="flex items-center gap-2 px-4 flex-1">
             <SidebarTrigger className="-ml-1" />
             <Separator
               orientation="vertical"
@@ -122,64 +145,77 @@ export default async function ReportPage({ params }: ReportPageProps) {
               </BreadcrumbList>
             </Breadcrumb>
           </div>
+          <div className="pr-4">
+            <NotificationBell />
+          </div>
         </header>
 
         <div className="flex flex-1 flex-col gap-4 p-4 pt-0">
           {/* Report Header */}
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-            <div className="flex items-center gap-3 min-w-0">
-              <h1 className="text-xl sm:text-2xl font-bold text-foreground truncate min-w-0">
-                {report.claim_number}
-              </h1>
-              <span className="text-sm text-muted-foreground whitespace-nowrap flex-shrink-0">
+            {/* Report title - hidden on mobile, shown in breadcrumbs instead */}
+            <h1 className="hidden sm:block text-xl sm:text-2xl font-bold text-foreground truncate min-w-0">
+              {report.claim_number}
+            </h1>
+
+            <div className="flex items-center justify-between gap-2">
+              {/* Date - left side */}
+              <span className="text-sm text-muted-foreground whitespace-nowrap">
                 {new Date(report.analysis_timestamp).toLocaleDateString()}
               </span>
-            </div>
 
-            <div className="flex items-center gap-2 flex-wrap">
-              {/* Download Buttons */}
-              {mediaFiles.length > 0 && (
-                <div className="flex items-center gap-1">
-                  {mediaFiles.map((file, index) => (
-                    <a
-                      key={file.fileId}
-                      href={file.downloadUrl}
-                      download
-                      title={`Download media ${index + 1}`}
-                    >
-                      <Button variant="outline" size="sm" className="h-9 w-9 p-0">
-                        <HugeiconsIcon icon={Image01Icon} size={16} />
-                        <span className="sr-only">Download media {index + 1}</span>
-                      </Button>
-                    </a>
-                  ))}
-                </div>
-              )}
+              {/* Action buttons - right side */}
+              <div className="flex items-center gap-2 flex-wrap">
+                <ReportFeedbackButton reportId={report.$id} />
 
-              {policyFile && (
-                <a href={policyFile.downloadUrl} download title="Download policy">
-                  <Button variant="outline" size="sm" className="h-9 w-9 p-0">
-                    <HugeiconsIcon icon={File01Icon} size={16} />
-                    <span className="sr-only">Download policy</span>
-                  </Button>
-                </a>
-              )}
+                {/* Download Buttons - Only shown to insurance adjusters and admins */}
+                {canDownloadFiles && (
+                  <>
+                    {mediaFiles.length > 0 && (
+                      <div className="flex items-center gap-1">
+                        {mediaFiles.map((file, index) => (
+                          <a
+                            key={file.fileId}
+                            href={file.downloadUrl}
+                            download
+                            title={`Download media ${index + 1}`}
+                          >
+                            <Button variant="outline" size="sm" className="h-9 w-9 p-0">
+                              <HugeiconsIcon icon={Image01Icon} size={16} />
+                              <span className="sr-only">Download media {index + 1}</span>
+                            </Button>
+                          </a>
+                        ))}
+                      </div>
+                    )}
 
-              <ReportActions
-                reportData={{
-                  report: report as unknown as Record<string, unknown>,
-                  damageDetails: damageDetails as unknown as Record<string, unknown>[],
-                  vehicleVerification: vehicleVerification as unknown as Record<string, unknown> | null,
-                  assessment: assessment as unknown as Record<string, unknown> | null,
-                  reportNumber: report.claim_number,
-                }}
-              />
+                    {policyFile && (
+                      <a href={policyFile.downloadUrl} download title="Download policy">
+                        <Button variant="outline" size="sm" className="h-9 w-9 p-0">
+                          <HugeiconsIcon icon={File01Icon} size={16} />
+                          <span className="sr-only">Download policy</span>
+                        </Button>
+                      </a>
+                    )}
+                  </>
+                )}
 
-              {report.claim_status && report.claim_status !== 'pending' && (
-                <Badge className={getStatusColor(report.claim_status)}>
-                  {report.claim_status}
-                </Badge>
-              )}
+                <ReportActions
+                  reportData={{
+                    report: report as unknown as Record<string, unknown>,
+                    damageDetails: allDamageDetails as unknown as Record<string, unknown>[],
+                    vehicleVerification: vehicleVerification as unknown as Record<string, unknown> | null,
+                    assessment: assessment as unknown as Record<string, unknown> | null,
+                    reportNumber: report.claim_number,
+                  }}
+                />
+
+                {report.claim_status && report.claim_status !== 'pending' && (
+                  <Badge className={getStatusColor(report.claim_status)}>
+                    {report.claim_status}
+                  </Badge>
+                )}
+              </div>
             </div>
           </div>
 
@@ -245,6 +281,27 @@ export default async function ReportPage({ params }: ReportPageProps) {
                   <div className="flex justify-between items-center px-4 py-3 bg-green-50 dark:bg-green-950/30">
                     <span className="text-sm font-semibold text-foreground">Estimated Payout</span>
                     <CurrencyAmount amount={assessment.estimated_payout} className="text-sm font-bold text-green-600 dark:text-green-400" />
+                  </div>
+                </div>
+              </>
+            )}
+
+            {/* Limited Assessment Data Section */}
+            {(report.confidence_score < 0.6 || report.vehicle_verification_status === 'insufficient_data') && (
+              <>
+                <div className="bg-muted px-4 py-2 border-y border-border">
+                  <div className="flex items-center gap-2">
+                    <HugeiconsIcon icon={AlertCircleIcon} size={16} className="text-muted-foreground flex-shrink-0" />
+                    <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">
+                      Limited Assessment Data
+                    </h2>
+                  </div>
+                </div>
+                <div className="divide-y divide-border">
+                  <div className="px-4 py-3">
+                    <p className="text-sm text-muted-foreground">
+                      {report.confidence_reasoning || 'The analysis confidence is low due to insufficient or unclear data in the provided media. Results should be verified manually.'}
+                    </p>
                   </div>
                 </div>
               </>
@@ -400,7 +457,7 @@ export default async function ReportPage({ params }: ReportPageProps) {
             )}
 
             {/* Damaged Parts Section */}
-            {damageDetails.length > 0 && (
+            {visibleDamages.length > 0 && (
               <>
                 <div className="bg-muted px-4 py-2 border-y border-border">
                   <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">
@@ -408,7 +465,7 @@ export default async function ReportPage({ params }: ReportPageProps) {
                   </h2>
                 </div>
                 <div className="divide-y divide-border">
-                  {damageDetails.map((detail) => (
+                  {visibleDamages.map((detail) => (
                     <div key={detail.$id} className="px-4 py-3">
                       <div className="flex items-center justify-between mb-1">
                         <div className="flex items-center gap-2">
@@ -423,6 +480,41 @@ export default async function ReportPage({ params }: ReportPageProps) {
                       </div>
                       {detail.description && (
                         <p className="text-sm text-muted-foreground">{detail.description}</p>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </>
+            )}
+
+            {/* Inferred Internal Damages Section */}
+            {inferredDamages.length > 0 && (
+              <>
+                <div className="border-t border-dashed border-border" />
+                <div className="bg-muted px-4 py-2 border-b border-border">
+                  <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">
+                    Inferred Internal Damages
+                  </h2>
+                  <p className="text-xs text-muted-foreground mt-0.5">
+                    Possible internal damage based on visible external damage. Not included in cost estimates.
+                  </p>
+                </div>
+                <div className="divide-y divide-border">
+                  {inferredDamages.map((detail) => (
+                    <div key={detail.$id} className="px-4 py-3 bg-muted/10">
+                      <div className="flex items-center justify-between mb-1">
+                        <span className="text-sm font-medium text-foreground">{detail.part_name}</span>
+                        {detail.inferred_likelihood && (
+                          <Badge className={getLikelihoodColor(detail.inferred_likelihood)}>
+                            {detail.inferred_likelihood}
+                          </Badge>
+                        )}
+                      </div>
+                      {detail.description && (
+                        <p className="text-sm text-muted-foreground">{detail.description}</p>
+                      )}
+                      {detail.inferred_based_on && (
+                        <p className="text-xs text-muted-foreground mt-1">Based on: {detail.inferred_based_on}</p>
                       )}
                     </div>
                   ))}

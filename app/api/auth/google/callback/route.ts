@@ -62,16 +62,27 @@ export async function GET(request: NextRequest) {
       expires: timeToExpire,
     });
 
+    // Check for pending plan selection (set from /pricing before OAuth)
+    const pendingPlan = cookieStore.get("pending_plan")?.value;
+
+    // Clear the pending_plan cookie
+    cookieStore.set("pending_plan", "", { path: "/", maxAge: 0 });
+
+    // Redirect to buy_plan if a plan was selected, otherwise go to landing page
+    const destination = pendingPlan
+      ? `${redirectUrl}/auth/dashboard/${userId}/buy_plan?plan=${pendingPlan}`
+      : `${redirectUrl}/`;
+
     // Force a full page reload to ensure cookies are read properly
     // Using HTML redirect instead of NextResponse.redirect to prevent client-side navigation
     return new NextResponse(
       `<!DOCTYPE html>
       <html>
         <head>
-          <meta http-equiv="refresh" content="0;url=${redirectUrl}/">
+          <meta http-equiv="refresh" content="0;url=${destination}">
         </head>
         <body>
-          <script>window.location.href = '${redirectUrl}/';</script>
+          <script>window.location.href = '${destination}';</script>
         </body>
       </html>`,
       {

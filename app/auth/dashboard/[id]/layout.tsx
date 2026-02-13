@@ -4,8 +4,12 @@ import { getUserPolicies } from "@/appwrite/getUserPolicies";
 import { redirect } from "next/navigation";
 import { UserProvider } from "@/lib/context/user-context";
 import { PolicyProvider } from "@/lib/context/policy-context";
+import { NotificationProvider } from "@/lib/context/notification-context";
 import { SidebarProvider } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/dashboardComponents/app-sidebar";
+import { PlanRedirectCheck } from "@/components/pricing/plan-redirect-check";
+import { getNotificationsCached } from "@/lib/data/cached-queries";
+import { getPlanLimit } from "@/lib/evaluation-limits";
 
 interface DashboardLayoutProps {
   children: React.ReactNode;
@@ -27,11 +31,12 @@ export default async function DashboardLayout({ children, params }: DashboardLay
     }
   }
 
-  // Get user document and policies in parallel
+  // Get user document, policies, and notifications in parallel
   const userId = disableProtection ? id : session!.id;
-  const [userDoc, policiesResult] = await Promise.all([
+  const [userDoc, policiesResult, notificationsData] = await Promise.all([
     getUserDocument(userId),
     getUserPolicies(userId),
+    getNotificationsCached(userId),
   ]);
 
   if (!disableProtection && (!userDoc || !userDoc.onboarding_completed)) {
@@ -43,6 +48,23 @@ export default async function DashboardLayout({ children, params }: DashboardLay
     userId,
     email: userDoc?.email || '',
     role: userDoc?.role || 'user',
+    phone: userDoc?.phone || '',
+    emailNotifications: userDoc?.email_notifications ?? true,
+    pushNotifications: userDoc?.push_notifications ?? false,
+    language: userDoc?.language || 'en',
+    profileVisibility: (userDoc?.profile_visibility || 'private') as 'public' | 'private',
+    dataSharing: userDoc?.data_sharing ?? false,
+    analyticsEnabled: userDoc?.analytics_enabled ?? true,
+    activityStatus: userDoc?.activity_status ?? true,
+    pricingPlan: (userDoc?.pricing_plan || 'free') as 'free' | 'pro' | 'max',
+    evaluationTimes: (() => {
+      const plan = userDoc?.pricing_plan || 'free';
+      const limit = getPlanLimit(plan);
+      const today = new Date().toISOString().slice(0, 10);
+      if (userDoc?.evaluation_reset_date !== today) return limit;
+      return Math.min(userDoc?.evaluation_times ?? limit, limit);
+    })(),
+    evaluationLimit: getPlanLimit(userDoc?.pricing_plan || 'free'),
   };
 
   const initialPolicies = policiesResult.success ? (policiesResult.policies || []) : [];
@@ -50,10 +72,17 @@ export default async function DashboardLayout({ children, params }: DashboardLay
   return (
     <UserProvider userData={userData}>
       <PolicyProvider initialPolicies={initialPolicies}>
-        <SidebarProvider>
-          <AppSidebar />
-          {children}
-        </SidebarProvider>
+        <NotificationProvider
+          userId={userId}
+          initialNotifications={notificationsData.notifications}
+          initialUnreadCount={notificationsData.unreadCount}
+        >
+          <SidebarProvider>
+            <AppSidebar />
+            <PlanRedirectCheck />
+            {children}
+          </SidebarProvider>
+        </NotificationProvider>
       </PolicyProvider>
     </UserProvider>
   );

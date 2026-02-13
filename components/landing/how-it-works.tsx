@@ -24,7 +24,7 @@ const insuranceSteps = [
     icon: SparklesIcon,
     title: "AI Analysis",
     description:
-      "Gemini AI processes media, identifies damage, extracts vehicle details",
+      "Our Custom AI model processes media, identifies damage, extracts vehicle details",
   },
   {
     number: 3,
@@ -37,7 +37,7 @@ const insuranceSteps = [
     icon: Shield01Icon,
     title: "Get Results",
     description:
-      "Receive detailed report with damage assessment, cost estimate, coverage analysis, and fraud indicators",
+      "Get a detailed damage report with cost estimates, coverage analysis, and fraud indicators",
   },
 ];
 
@@ -105,9 +105,9 @@ export function HowItWorks() {
   return (
     <section
       id="how-it-works"
-      className="bg-muted/30 py-16 md:py-24"
+      className="bg-muted/30 min-h-screen flex items-center"
     >
-      <div className="max-w-7xl mx-auto px-4">
+      <div className="max-w-7xl mx-auto px-4 py-16 w-full">
         <div className="text-center mb-12 space-y-4">
           <h2 className="text-3xl md:text-4xl font-bold">How It Works</h2>
           <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
@@ -121,21 +121,23 @@ export function HowItWorks() {
             <TabsTrigger value="owners">For Car Owners</TabsTrigger>
           </TabsList>
 
-          <TabsContent value="insurance">
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8 lg:gap-4">
-              {insuranceSteps.map((step) => (
-                <StepCard key={step.number} step={step} />
-              ))}
-            </div>
-          </TabsContent>
+          <div className="grid [&>*]:col-start-1 [&>*]:row-start-1">
+            <TabsContent value="insurance" forceMount className="data-[state=inactive]:invisible">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8 lg:gap-4">
+                {insuranceSteps.map((step) => (
+                  <StepCard key={step.number} step={step} />
+                ))}
+              </div>
+            </TabsContent>
 
-          <TabsContent value="owners">
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8 lg:gap-4">
-              {carOwnerSteps.map((step) => (
-                <StepCard key={step.number} step={step} />
-              ))}
-            </div>
-          </TabsContent>
+            <TabsContent value="owners" forceMount className="data-[state=inactive]:invisible">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8 lg:gap-4">
+                {carOwnerSteps.map((step) => (
+                  <StepCard key={step.number} step={step} />
+                ))}
+              </div>
+            </TabsContent>
+          </div>
         </Tabs>
       </div>
     </section>

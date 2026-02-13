@@ -139,6 +139,24 @@ For each damaged area, assess whether the damage appears FRESH or OLD:
 - Multiple layers of rust/paint deterioration
 - Structural corrosion visible
 
+### INFERRED INTERNAL DAMAGE ANALYSIS
+
+Based on the visible external damage, infer possible internal/mechanical damage that may have occurred but is NOT visible. These are informational only and NOT included in repair cost estimates or payout.
+
+**INFERENCE RULES:**
+- Front-end collision → Consider: radiator, coolant system, engine mounts, A/C condenser, fan assembly
+- Side impact → Consider: door intrusion beams, side airbag sensors, window regulators
+- Rear-end collision → Consider: trunk/tailgate mechanisms, fuel system, exhaust system, rear suspension
+- Undercarriage damage → Consider: oil pan, transmission pan, drive shaft, exhaust components
+- Wheel area damage → Consider: suspension struts/shocks, control arms, wheel bearings, CV joints, brake components
+- Severe impacts → Consider: frame/unibody alignment, airbag system, seatbelt pretensioners
+
+**IMPORTANT:**
+- Only infer damages mechanically plausible given the OBSERVED external damage
+- Assign likelihood: "high" (very likely), "medium" (plausible), "low" (possible but uncertain)
+- Keep the list focused (3-8 items typically)
+- These are NOT included in any cost estimates
+
 ### SURFACE CONTAMINATION CHECK
 Identify any substances covering or near the damage:
 - Dirt, mud, road grime
@@ -167,6 +185,14 @@ Return a JSON object with the following structure:
       "ageIndicators": ["Shiny exposed metal", "No oxidation visible"],
       "rustPresent": false,
       "preExisting": false
+    }
+  ],
+  "inferredInternalDamages": [
+    {
+      "component": "radiator",
+      "likelihood": "high",
+      "description": "Front-end impact likely damaged the radiator or mounting brackets",
+      "basedOn": "Front bumper and grille area damage"
     }
   ],
   "overallSeverity": "moderate",

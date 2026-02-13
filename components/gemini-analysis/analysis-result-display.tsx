@@ -137,6 +137,47 @@ export function AnalysisResultDisplay({
             <p className="text-sm text-muted-foreground">No damaged parts identified.</p>
           )}
 
+          {/* Inferred Internal Damages */}
+          {analysis.inferredInternalDamages && analysis.inferredInternalDamages.length > 0 && (
+            <div>
+              <h4 className="font-semibold mb-1">Inferred Internal Damages</h4>
+              <p className="text-xs text-muted-foreground mb-3">
+                Possible internal damage based on visible external damage. Not included in cost estimates.
+              </p>
+              <div className="border border-dashed rounded-lg overflow-hidden">
+                <table className="w-full text-sm">
+                  <thead className="bg-muted/50">
+                    <tr>
+                      <th className="text-left p-3">Component</th>
+                      <th className="text-left p-3">Likelihood</th>
+                      <th className="text-left p-3">Reasoning</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y">
+                    {analysis.inferredInternalDamages.map((item, index) => (
+                      <tr key={index}>
+                        <td className="p-3 font-medium">{item.component}</td>
+                        <td className="p-3">
+                          <Badge variant="outline" className={cn(
+                            item.likelihood === 'high' && 'border-orange-300 text-orange-700 dark:border-orange-700 dark:text-orange-300',
+                            item.likelihood === 'medium' && 'border-yellow-300 text-yellow-700 dark:border-yellow-700 dark:text-yellow-300',
+                            item.likelihood === 'low' && 'border-muted-foreground/30 text-muted-foreground',
+                          )}>
+                            {item.likelihood}
+                          </Badge>
+                        </td>
+                        <td className="p-3 text-muted-foreground">
+                          <p>{item.description}</p>
+                          <p className="text-xs mt-1">Based on: {item.basedOn}</p>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
+
           {/* Safety Concerns */}
           {analysis.safetyConcerns && analysis.safetyConcerns.length > 0 && (
             <div>

@@ -4,6 +4,7 @@ import { adminAction } from '@/appwrite/adminOrClient';
 import { DATABASE_ID, COLLECTION_IDS } from '@/lib/env';
 import { ID } from 'node-appwrite';
 import { getReportPermissions, getReportRelatedPermissions } from '@/lib/permissions';
+import { createNotification } from '@/appwrite/createNotification';
 import type { EnhancedAutoDamageAnalysis } from '@/lib/gemini/types';
 import type { ReportDocument, InsuranceCompanyDocument } from '@/lib/types/appwrite';
 
@@ -436,10 +437,9 @@ function toValidInteger(
       return undefined;
     }
 
-    // Clamp to range
+    // Return undefined for values below min (0 typically means "unknown" from Gemini)
     if (min != null && int < min) {
-      console.warn(`⚠️ ${fieldName} below min (${int} < ${min}), clamping to ${min}`);
-      return min;
+      return undefined;
     }
     if (max != null && int > max) {
       console.warn(`⚠️ ${fieldName} above max (${int} > ${max}), clamping to ${max}`);
@@ -594,6 +594,35 @@ export async function createReportFromAnalysis(
       );
     });
 
+    // 3b. Create inferred internal damage documents
+    const inferredDamagesPromises = (analysisData.inferredInternalDamages || []).map((item, index) => {
+      // Map likelihood to severity: high→severe, medium→moderate, low→minor
+      const likelihoodToSeverity: Record<string, 'minor' | 'moderate' | 'severe'> = {
+        high: 'severe',
+        medium: 'moderate',
+        low: 'minor',
+      };
+      const severity = likelihoodToSeverity[item.likelihood] || 'moderate';
+
+      return databases.createDocument(
+        DATABASE_ID,
+        COLLECTION_IDS.REPORT_DAMAGE_DETAILS,
+        ID.unique(),
+        {
+          claim_id: reportId,
+          part_name: item.component,
+          severity,
+          description: item.description,
+          estimated_repair_cost: null,
+          sort_order: analysisData.damagedParts.length + index,
+          is_inferred: true,
+          inferred_likelihood: item.likelihood,
+          inferred_based_on: toValidString(item.basedOn, 500, 'inferred_based_on'),
+        },
+        getReportRelatedPermissions(userId, teamId)
+      );
+    });
+
     // 4. Create vehicle verification document
     const verificationPromise = databases.createDocument(
       DATABASE_ID,
@@ -692,40 +721,40 @@ export async function createReportFromAnalysis(
         damage_age_estimated: analysisData.damageAgeAssessment?.estimatedAge || null,
         damage_age_confidence: analysisData.damageAgeAssessment?.confidenceScore ?? null,
         damage_age_data_json: analysisData.damageAgeAssessment
-          ? JSON.stringify({
+          ? toValidString(JSON.stringify({
               reasoning: analysisData.damageAgeAssessment.reasoning,
               indicators: analysisData.damageAgeAssessment.indicators,
-            })
+            }), 2000, 'damage_age_data_json')
           : null,
         // Contamination assessment
         contamination_detected: analysisData.contaminationAssessment?.contaminationDetected ?? false,
         contamination_data_json: analysisData.contaminationAssessment
-          ? JSON.stringify({
+          ? toValidString(JSON.stringify({
               riskLevel: analysisData.contaminationAssessment.fraudRiskLevel,
               notes: analysisData.contaminationAssessment.notes,
               contaminants: analysisData.contaminationAssessment.contaminants,
-            })
+            }), 1500, 'contamination_data_json')
           : null,
         // Rust/corrosion assessment
         rust_detected: analysisData.rustCorrosionAssessment?.rustDetected ?? false,
         rust_fraud_indicator: analysisData.rustCorrosionAssessment?.fraudIndicator ?? false,
         rust_data_json: analysisData.rustCorrosionAssessment
-          ? JSON.stringify({
+          ? toValidString(JSON.stringify({
               corrosionLevel: analysisData.rustCorrosionAssessment.overallCorrosionLevel,
               estimatedAge: analysisData.rustCorrosionAssessment.estimatedCorrosionAge,
               notes: analysisData.rustCorrosionAssessment.notes,
               affectedAreas: analysisData.rustCorrosionAssessment.corrosionAreas,
-            })
+            }), 2000, 'rust_data_json')
           : null,
         // Pre-existing damage assessment
         pre_existing_detected: analysisData.preExistingDamageAssessment?.preExistingDamageDetected ?? false,
         pre_existing_risk_level: analysisData.preExistingDamageAssessment?.fraudRiskLevel || null,
         pre_existing_data_json: analysisData.preExistingDamageAssessment
-          ? JSON.stringify({
+          ? toValidString(JSON.stringify({
               damageConsistency: analysisData.preExistingDamageAssessment.damageConsistency,
               notes: analysisData.preExistingDamageAssessment.notes,
               preExistingItems: analysisData.preExistingDamageAssessment.preExistingItems,
-            })
+            }), 2000, 'pre_existing_data_json')
           : null,
       },
       getReportRelatedPermissions(userId, teamId)
@@ -742,10 +771,21 @@ export async function createReportFromAnalysis(
     // 7. Wait for all related documents to be created
     await Promise.all([
       ...damageDetailsPromises,
+      ...inferredDamagesPromises,
       verificationPromise,
       assessmentPromise,
       fraudAssessmentPromise,
     ]);
+
+    // Create notification for the user
+    createNotification({
+      user_id: userId,
+      title: 'Report Analysis Complete',
+      message: `Your damage report ${report.claim_number} has been analyzed. Estimated repair cost: $${analysisData.estimatedTotalRepairCost.toLocaleString('en-US')}.`,
+      type: 'report_completed',
+      link: `/auth/reports/${reportId}`,
+      report_id: reportId,
+    }).catch((err) => console.error('Failed to create notification:', err));
 
     return { success: true, data: report };
   } catch (error: any) {

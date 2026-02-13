@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, startTransition } from "react";
 import { getUserLocation } from "@/lib/utils/country-detection";
 
 interface CurrencyAmountProps {
@@ -12,12 +12,14 @@ export function CurrencyAmount({ amount, className }: CurrencyAmountProps) {
   const [currencySymbol, setCurrencySymbol] = useState("$");
 
   useEffect(() => {
-    setCurrencySymbol(getUserLocation().currencySymbol);
+    startTransition(() => {
+      setCurrencySymbol(getUserLocation().currencySymbol);
+    });
   }, []);
 
   return (
     <span className={className}>
-      {currencySymbol}{amount.toLocaleString()}
+      {currencySymbol}{amount.toLocaleString("en-US")}
     </span>
   );
 }

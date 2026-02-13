@@ -98,3 +98,58 @@ export function clearOnboardingFlow(): void {
     console.error('Failed to clear onboarding flow:', error);
   }
 }
+
+// --- Plan selection persistence ---
+
+const PLAN_KEY = 'vehicleclaim_plan_selection';
+
+interface PlanSelection {
+  plan: string;
+  timestamp: number;
+}
+
+/**
+ * Saves the selected plan slug to localStorage
+ */
+export function savePlanSelection(plan: string): void {
+  try {
+    const data: PlanSelection = { plan, timestamp: Date.now() };
+    localStorage.setItem(PLAN_KEY, JSON.stringify(data));
+  } catch (error) {
+    console.error('Failed to save plan selection:', error);
+  }
+}
+
+/**
+ * Retrieves plan selection from localStorage
+ * Returns null if data doesn't exist or is stale (>1 hour old)
+ */
+export function getPlanSelection(): string | null {
+  try {
+    const data = localStorage.getItem(PLAN_KEY);
+    if (!data) return null;
+
+    const parsed: PlanSelection = JSON.parse(data);
+
+    if (Date.now() - parsed.timestamp > MAX_AGE_MS) {
+      clearPlanSelection();
+      return null;
+    }
+
+    return parsed.plan;
+  } catch (error) {
+    console.error('Failed to get plan selection:', error);
+    return null;
+  }
+}
+
+/**
+ * Removes plan selection from localStorage
+ */
+export function clearPlanSelection(): void {
+  try {
+    localStorage.removeItem(PLAN_KEY);
+  } catch (error) {
+    console.error('Failed to clear plan selection:', error);
+  }
+}

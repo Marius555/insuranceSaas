@@ -20,6 +20,7 @@ import { FileEmpty02Icon, AttachmentIcon } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { ReportUploadModal } from "@/components/dashboardComponents/report-upload-modal";
 import { FilmVideoButton } from "@/components/dashboardComponents/film-video-button";
+import { NotificationBell } from "@/components/notifications/notification-bell";
 import { useUser } from "@/lib/context/user-context";
 import { useRouter } from "next/navigation";
 import { useEffect } from "react";
@@ -43,7 +44,7 @@ export default function UserDashboard() {
   return (
     <SidebarInset>
       <header className="flex h-16 shrink-0 items-center gap-2">
-        <div className="flex items-center gap-2 px-4">
+        <div className="flex items-center gap-2 px-4 flex-1">
           <SidebarTrigger className="-ml-1" />
           <Separator
             orientation="vertical"
@@ -56,6 +57,9 @@ export default function UserDashboard() {
               </BreadcrumbItem>
             </BreadcrumbList>
           </Breadcrumb>
+        </div>
+        <div className="pr-4">
+          <NotificationBell />
         </div>
       </header>
 

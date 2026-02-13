@@ -7,6 +7,7 @@ import { ProgressIndicator } from "@/components/gemini-analysis/progress-indicat
 import { submitReportAction } from "@/appwrite/submitReportAction";
 import { type PolicyInfo } from "@/lib/types/appwrite";
 import { usePolicies } from "@/lib/context/policy-context";
+import { useUser } from "@/lib/context/user-context";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -19,6 +20,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Skeleton } from "@/components/ui/skeleton";
 import { getUserLocation } from "@/lib/utils/country-detection";
+import { toast } from "sonner";
 import { HugeiconsIcon } from "@hugeicons/react";
 import {
   Pdf02Icon,
@@ -35,6 +37,7 @@ interface PolicyAnalysisTabContentProps {
 }
 
 export function PolicyAnalysisTabContent({ onSuccess }: PolicyAnalysisTabContentProps) {
+  const { evaluationTimes } = useUser();
   const [mediaType, setMediaType] = useState<'image' | 'video' | null>(null);
   const [mediaFiles, setMediaFiles] = useState<File[]>([]);
 
@@ -48,7 +51,6 @@ export function PolicyAnalysisTabContent({ onSuccess }: PolicyAnalysisTabContent
 
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [currentStep, setCurrentStep] = useState(1);
-  const [error, setError] = useState<string>("");
   const [success, setSuccess] = useState(false);
 
   // Determine the active policy (new upload takes precedence)
@@ -102,9 +104,12 @@ export function PolicyAnalysisTabContent({ onSuccess }: PolicyAnalysisTabContent
 
   const handleAnalyze = async () => {
     if (mediaFiles.length === 0 || !hasPolicy) return;
+    if (evaluationTimes <= 0) {
+      toast.warning("Daily evaluation limit reached. Upgrade your plan for more evaluations.");
+      return;
+    }
 
     setIsAnalyzing(true);
-    setError("");
     setCurrentStep(1);
 
     try {
@@ -141,20 +146,26 @@ export function PolicyAnalysisTabContent({ onSuccess }: PolicyAnalysisTabContent
       const result = await submitReportAction(formData);
 
       if (result.success && result.reportId) {
+        // Step 5: Saving
+        setCurrentStep(5);
+        await new Promise(resolve => setTimeout(resolve, 600));
+
+        // Step 6: Complete
         setCurrentStep(6);
+        await new Promise(resolve => setTimeout(resolve, 800));
+
         setSuccess(true);
-        // Refresh policies cache if a new policy was uploaded
         if (newPolicyFile) {
           refreshPolicies();
         }
         onSuccess(result.reportId!);
       } else {
-        setError(result.message || "Analysis failed. Please try again.");
+        toast.error(result.message || "Analysis failed. Please try again.");
         setIsAnalyzing(false);
       }
     } catch (err) {
       console.error("Upload error:", err);
-      setError("An unexpected error occurred. Please try again.");
+      toast.error("An unexpected error occurred. Please try again.");
       setIsAnalyzing(false);
     }
   };
@@ -434,22 +445,6 @@ export function PolicyAnalysisTabContent({ onSuccess }: PolicyAnalysisTabContent
         <ProgressIndicator currentStep={currentStep} />
       )}
 
-      {error && (
-        <div className="rounded-lg bg-destructive/10 border border-destructive p-4 text-destructive">
-          {error}
-        </div>
-      )}
-
-      {success && (
-        <div className="text-center py-12">
-          <div className="text-green-600 text-xl font-semibold mb-2">
-            Report Generated Successfully!
-          </div>
-          <p className="text-muted-foreground">
-            Redirecting to your report...
-          </p>
-        </div>
-      )}
     </div>
   );
 }

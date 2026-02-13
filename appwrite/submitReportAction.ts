@@ -2,6 +2,7 @@
 
 import { submitReport } from '@/appwrite/submitReport';
 import { getSession } from '@/appwrite/getSession';
+import { checkEvaluationLimit, decrementEvaluationLimit } from '@/appwrite/checkEvaluationLimit';
 import { revalidatePath, revalidateTag } from 'next/cache';
 
 /**
@@ -42,6 +43,12 @@ export async function submitReportAction(formData: FormData) {
     };
   }
   const userId = session.id;
+
+  // Check evaluation limit before proceeding
+  const evalCheck = await checkEvaluationLimit(userId);
+  if (!evalCheck.allowed) {
+    return { success: false, message: evalCheck.message };
+  }
 
   // Parse video quality metadata if provided
   let videoQualityMetadata: {
@@ -96,6 +103,7 @@ export async function submitReportAction(formData: FormData) {
 
   // Bust Router Cache + Data Cache so the user sees their new report immediately
   if (result.success) {
+    await decrementEvaluationLimit(userId);
     revalidatePath(`/auth/dashboard/${userId}/reports`);
     revalidatePath(`/auth/dashboard/${userId}`);
     revalidateTag(`reports-${userId}`, { expire: 0 });

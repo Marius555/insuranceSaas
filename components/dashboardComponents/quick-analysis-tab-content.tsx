@@ -7,17 +7,19 @@ import { ProgressIndicator } from "@/components/gemini-analysis/progress-indicat
 import { submitReportAction } from "@/appwrite/submitReportAction";
 import { Button } from "@/components/ui/button";
 import { getUserLocation } from "@/lib/utils/country-detection";
+import { useUser } from "@/lib/context/user-context";
+import { toast } from "sonner";
 
 interface QuickAnalysisTabContentProps {
   onSuccess: (reportId: string) => void;
 }
 
 export function QuickAnalysisTabContent({ onSuccess }: QuickAnalysisTabContentProps) {
+  const { evaluationTimes } = useUser();
   const [mediaType, setMediaType] = useState<'image' | 'video' | null>(null);
   const [files, setFiles] = useState<File[]>([]);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [currentStep, setCurrentStep] = useState(1);
-  const [error, setError] = useState<string>("");
   const [success, setSuccess] = useState(false);
 
   const handleFilesSelected = (selectedFiles: File[]) => {
@@ -41,9 +43,12 @@ export function QuickAnalysisTabContent({ onSuccess }: QuickAnalysisTabContentPr
 
   const handleAnalyze = async () => {
     if (files.length === 0) return;
+    if (evaluationTimes <= 0) {
+      toast.warning("Daily evaluation limit reached. Upgrade your plan for more evaluations.");
+      return;
+    }
 
     setIsAnalyzing(true);
-    setError("");
     setCurrentStep(1);
 
     try {
@@ -77,17 +82,23 @@ export function QuickAnalysisTabContent({ onSuccess }: QuickAnalysisTabContentPr
       const result = await submitReportAction(formData);
 
       if (result.success && result.reportId) {
+        // Step 5: Saving
+        setCurrentStep(5);
+        await new Promise(resolve => setTimeout(resolve, 600));
+
+        // Step 6: Complete
         setCurrentStep(6);
+        await new Promise(resolve => setTimeout(resolve, 800));
+
         setSuccess(true);
-        // Call immediately - no delay, let modal stay open during navigation
         onSuccess(result.reportId!);
       } else {
-        setError(result.message || "Analysis failed. Please try again.");
+        toast.error(result.message || "Analysis failed. Please try again.");
         setIsAnalyzing(false);
       }
     } catch (err) {
       console.error("Upload error:", err);
-      setError("An unexpected error occurred. Please try again.");
+      toast.error("An unexpected error occurred. Please try again.");
       setIsAnalyzing(false);
     }
   };
@@ -137,22 +148,6 @@ export function QuickAnalysisTabContent({ onSuccess }: QuickAnalysisTabContentPr
         <ProgressIndicator currentStep={currentStep} />
       )}
 
-      {error && (
-        <div className="rounded-lg bg-destructive/10 border border-destructive p-4 text-destructive">
-          {error}
-        </div>
-      )}
-
-      {success && (
-        <div className="text-center py-12">
-          <div className="text-green-600 text-xl font-semibold mb-2">
-            ✓ Report Submitted Successfully!
-          </div>
-          <p className="text-muted-foreground">
-            Redirecting to your report...
-          </p>
-        </div>
-      )}
     </div>
   );
 }

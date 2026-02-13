@@ -47,6 +47,70 @@
           "type": "boolean",
           "required": false,
           "default": false
+        },
+        {
+          "key": "email_notifications",
+          "type": "boolean",
+          "required": false,
+          "default": true
+        },
+        {
+          "key": "push_notifications",
+          "type": "boolean",
+          "required": false,
+          "default": false
+        },
+        {
+          "key": "language",
+          "type": "string",
+          "size": 10,
+          "required": false,
+          "default": "en"
+        },
+        {
+          "key": "profile_visibility",
+          "type": "enum",
+          "elements": ["public", "private"],
+          "required": false,
+          "default": "private"
+        },
+        {
+          "key": "data_sharing",
+          "type": "boolean",
+          "required": false,
+          "default": false
+        },
+        {
+          "key": "analytics_enabled",
+          "type": "boolean",
+          "required": false,
+          "default": true
+        },
+        {
+          "key": "activity_status",
+          "type": "boolean",
+          "required": false,
+          "default": true
+        },
+        {
+          "key": "pricing_plan",
+          "type": "enum",
+          "elements": ["free", "pro", "max"],
+          "required": false,
+          "default": "free"
+        },
+        {
+          "key": "evaluation_times",
+          "type": "integer",
+          "required": false,
+          "default": 1,
+          "min": 0
+        },
+        {
+          "key": "evaluation_reset_date",
+          "type": "string",
+          "size": 10,
+          "required": false
         }
       ],
       "indexes": [
@@ -64,6 +128,11 @@
           "key": "insurance_company_id_index",
           "type": "key",
           "attributes": ["insurance_company_id"]
+        },
+        {
+          "key": "pricing_plan_index",
+          "type": "key",
+          "attributes": ["pricing_plan"]
         }
       ]
     },
@@ -394,6 +463,24 @@
           "type": "boolean",
           "required": false,
           "default": false
+        },
+        {
+          "key": "is_inferred",
+          "type": "boolean",
+          "required": false,
+          "default": false
+        },
+        {
+          "key": "inferred_likelihood",
+          "type": "enum",
+          "elements": ["high", "medium", "low"],
+          "required": false
+        },
+        {
+          "key": "inferred_based_on",
+          "type": "string",
+          "size": 500,
+          "required": false
         }
       ],
       "indexes": [
@@ -714,7 +801,7 @@
         {
           "key": "damage_age_data_json",
           "type": "string",
-          "size": 4000,
+          "size": 2000,
           "required": false
         },
         {
@@ -726,7 +813,7 @@
         {
           "key": "contamination_data_json",
           "type": "string",
-          "size": 3000,
+          "size": 1500,
           "required": false
         },
         {
@@ -744,7 +831,7 @@
         {
           "key": "rust_data_json",
           "type": "string",
-          "size": 4000,
+          "size": 2000,
           "required": false
         },
         {
@@ -762,7 +849,7 @@
         {
           "key": "pre_existing_data_json",
           "type": "string",
-          "size": 4000,
+          "size": 2000,
           "required": false
         }
       ],
@@ -940,6 +1027,12 @@
           "required": true
         },
         {
+          "key": "report_id",
+          "type": "string",
+          "size": 36,
+          "required": false
+        },
+        {
           "key": "status",
           "type": "enum",
           "elements": ["pending_review", "reviewed", "addressed"],
@@ -952,6 +1045,11 @@
           "key": "user_id_index",
           "type": "key",
           "attributes": ["user_id"]
+        },
+        {
+          "key": "report_id_index",
+          "type": "key",
+          "attributes": ["report_id"]
         },
         {
           "key": "category_index",
@@ -968,6 +1066,146 @@
           "type": "key",
           "attributes": ["$createdAt"],
           "orders": ["DESC"]
+        }
+      ]
+    },
+    {
+      "id": "notifications",
+      "name": "notifications",
+      "documentSecurity": true,
+      "permissions": [],
+      "attributes": [
+        {
+          "key": "user_id",
+          "type": "string",
+          "size": 36,
+          "required": true
+        },
+        {
+          "key": "title",
+          "type": "string",
+          "size": 255,
+          "required": true
+        },
+        {
+          "key": "message",
+          "type": "string",
+          "size": 1000,
+          "required": true
+        },
+        {
+          "key": "type",
+          "type": "enum",
+          "elements": ["report_completed", "report_updated", "system", "info"],
+          "required": true
+        },
+        {
+          "key": "is_read",
+          "type": "boolean",
+          "required": false,
+          "default": false
+        },
+        {
+          "key": "link",
+          "type": "string",
+          "size": 500,
+          "required": false
+        },
+        {
+          "key": "report_id",
+          "type": "string",
+          "size": 36,
+          "required": false
+        }
+      ],
+      "indexes": [
+        {
+          "key": "user_id_index",
+          "type": "key",
+          "attributes": ["user_id"]
+        },
+        {
+          "key": "is_read_index",
+          "type": "key",
+          "attributes": ["is_read"]
+        },
+        {
+          "key": "user_unread_index",
+          "type": "key",
+          "attributes": ["user_id", "is_read"]
+        },
+        {
+          "key": "created_at_index",
+          "type": "key",
+          "attributes": ["$createdAt"],
+          "orders": ["DESC"]
+        }
+      ]
+    },
+    {
+      "id": "news_posts",
+      "name": "news_posts",
+      "documentSecurity": false,
+      "permissions": [],
+      "attributes": [
+        {
+          "key": "author_id",
+          "type": "string",
+          "size": 36,
+          "required": true
+        },
+        {
+          "key": "title",
+          "type": "string",
+          "size": 255,
+          "required": true
+        },
+        {
+          "key": "body",
+          "type": "string",
+          "size": 10000,
+          "required": true
+        },
+        {
+          "key": "excerpt",
+          "type": "string",
+          "size": 500,
+          "required": false
+        },
+        {
+          "key": "cover_image_id",
+          "type": "string",
+          "size": 36,
+          "required": false
+        },
+        {
+          "key": "is_published",
+          "type": "boolean",
+          "required": false,
+          "default": false
+        },
+        {
+          "key": "published_at",
+          "type": "datetime",
+          "required": false
+        }
+      ],
+      "indexes": [
+        {
+          "key": "is_published_index",
+          "type": "key",
+          "attributes": ["is_published"]
+        },
+        {
+          "key": "published_at_index",
+          "type": "key",
+          "attributes": ["published_at"],
+          "orders": ["DESC"]
+        },
+        {
+          "key": "published_compound",
+          "type": "key",
+          "attributes": ["is_published", "published_at"]
         }
       ]
     }

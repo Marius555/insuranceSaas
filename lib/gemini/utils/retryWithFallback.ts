@@ -1,7 +1,7 @@
 "use server";
 
 import { getModelWithRateLimiting } from '../client';
-import { isRateLimitError } from './sanitizeError';
+import { isRetryableError } from './sanitizeError';
 
 /**
  * Execute a Gemini API call with automatic model fallback on 503 errors
@@ -76,9 +76,9 @@ export async function retryWithFallback<T>(
   } catch (error: unknown) {
     console.log(`❌ Model ${modelName} failed with error:`, error);
 
-    // Check if it's a 503/overload error (rate limit or service unavailable)
-    if (isRateLimitError(error)) {
-      console.log(`🔄 Model ${modelName} is overloaded (503), attempting fallback to next model...`);
+    // Check if it's a retryable error (rate limit, 503, or JSON truncation)
+    if (isRetryableError(error)) {
+      console.log(`🔄 Model ${modelName} failed with retryable error, attempting fallback to next model...`);
 
       // Recursive retry with next model
       return retryWithFallback(apiCall, estimatedTokens, attemptedModels);

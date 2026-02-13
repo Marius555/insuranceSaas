@@ -6,6 +6,17 @@ export interface UserContextData {
   userId: string;
   email: string;
   role: 'user' | 'admin' | 'insurance_adjuster';
+  phone: string;
+  emailNotifications: boolean;
+  pushNotifications: boolean;
+  language: string;
+  profileVisibility: 'public' | 'private';
+  dataSharing: boolean;
+  analyticsEnabled: boolean;
+  activityStatus: boolean;
+  pricingPlan: 'free' | 'pro' | 'max';
+  evaluationTimes: number;
+  evaluationLimit: number;
 }
 
 const UserContext = createContext<UserContextData | null>(null);

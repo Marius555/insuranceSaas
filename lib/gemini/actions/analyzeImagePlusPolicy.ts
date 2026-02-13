@@ -223,6 +223,24 @@ For each damaged part, include:
 - rustPresent: boolean
 - preExisting: boolean
 
+### STEP 1.6: INFERRED INTERNAL DAMAGE ANALYSIS
+
+Based on the visible external damage, infer possible internal/mechanical damage that may have occurred but is NOT visible. These are informational only and NOT included in repair cost estimates or payout.
+
+**INFERENCE RULES:**
+- Front-end collision → Consider: radiator, coolant system, engine mounts, A/C condenser, fan assembly
+- Side impact → Consider: door intrusion beams, side airbag sensors, window regulators
+- Rear-end collision → Consider: trunk/tailgate mechanisms, fuel system, exhaust system, rear suspension
+- Undercarriage damage → Consider: oil pan, transmission pan, drive shaft, exhaust components
+- Wheel area damage → Consider: suspension struts/shocks, control arms, wheel bearings, CV joints, brake components
+- Severe impacts → Consider: frame/unibody alignment, airbag system, seatbelt pretensioners
+
+**IMPORTANT:**
+- Only infer damages mechanically plausible given the OBSERVED external damage
+- Assign likelihood: "high" (very likely), "medium" (plausible), "low" (possible but uncertain)
+- Keep the list focused (3-8 items typically)
+- These are NOT included in estimatedTotalRepairCost or any payout calculations
+
 ### STEP 2: IMAGE ANALYSIS - Vehicle Identification (CRITICAL for fraud prevention)
 Extract ALL visible vehicle identification details from the images:
 1. **License plate number** - Look carefully at plates in images (null if not visible)
@@ -403,6 +421,14 @@ Return ONLY valid JSON (no markdown) with this exact structure:
       "ageIndicators": ["Shiny exposed metal", "Clean paint edges"],
       "rustPresent": false,
       "preExisting": false
+    }
+  ],
+  "inferredInternalDamages": [
+    {
+      "component": "radiator",
+      "likelihood": "high",
+      "description": "Front-end impact at bumper level likely damaged the radiator or its mounting brackets",
+      "basedOn": "Severe front bumper and hood damage from collision"
     }
   ],
   "overallSeverity": "severe",
