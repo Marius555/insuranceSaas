@@ -96,7 +96,7 @@ export default async function NewsPostPage({ params }: { params: Promise<{ id: s
   const isAdmin = userDoc?.role === "admin";
 
   return (
-    <div className="animate-page-enter">
+    <div>
       <Header session={session} userDoc={userDoc} />
       <main>
         <NewsPostDetail post={post} isAdmin={isAdmin} />

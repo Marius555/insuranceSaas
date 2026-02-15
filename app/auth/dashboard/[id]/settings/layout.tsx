@@ -1,5 +1,6 @@
 "use client"
 
+import { useEffect, useRef } from "react"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
 import { HugeiconsIcon } from "@hugeicons/react"
@@ -41,6 +42,15 @@ export default function SettingsLayout({
   const pathname = usePathname()
   const { userId } = useUser()
   const basePath = `/auth/dashboard/${userId}/settings`
+  const activeTab = pathname.split("/").pop() || "general"
+
+  // Track previous tab to skip animation on initial mount (page-level animation handles it)
+  const prevTabRef = useRef<string | null>(null)
+  const shouldAnimate = prevTabRef.current !== null && prevTabRef.current !== activeTab
+
+  useEffect(() => {
+    prevTabRef.current = activeTab
+  }, [activeTab])
 
   return (
     <SidebarInset>
@@ -84,7 +94,7 @@ export default function SettingsLayout({
                   size="sm"
                   asChild
                 >
-                  <Link href={fullHref}>
+                  <Link href={fullHref} data-settings-tab>
                     <HugeiconsIcon icon={tab.icon} />
                     {tab.label}
                   </Link>
@@ -93,7 +103,9 @@ export default function SettingsLayout({
             })}
           </nav>
           <Card className="min-h-[480px]">
-            {children}
+            <div key={activeTab} className={shouldAnimate ? "animate-state-fade-in" : ""}>
+              {children}
+            </div>
           </Card>
         </div>
       </div>

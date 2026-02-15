@@ -554,6 +554,9 @@ export default async function ReportPage({ params }: ReportPageProps) {
                       <div className="flex items-center justify-between mb-1">
                         <div className="flex items-center gap-2">
                           <span className="text-sm font-medium text-foreground">{detail.part_name}</span>
+                          {detail.estimated_repair_cost && (
+                            <span className="text-sm font-semibold text-muted-foreground">— {detail.estimated_repair_cost}</span>
+                          )}
                         </div>
                         <div className="flex items-center gap-1.5">
                           {detail.repair_or_replace && detail.repair_or_replace !== 'undetermined' && (
@@ -572,11 +575,6 @@ export default async function ReportPage({ params }: ReportPageProps) {
                           </Badge>
                         </div>
                       </div>
-                      {detail.estimated_repair_cost && (
-                        <div className="mt-1">
-                          <span className="text-sm font-semibold text-foreground">{detail.estimated_repair_cost}</span>
-                        </div>
-                      )}
                       {detail.description && (
                         <p className="text-sm text-muted-foreground mt-1">{detail.description}</p>
                       )}

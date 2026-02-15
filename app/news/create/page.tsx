@@ -26,7 +26,7 @@ export default async function CreateNewsPostPage() {
   }
 
   return (
-    <div className="animate-page-enter">
+    <div>
       <Header session={session} userDoc={userDoc} />
       <main>
         <NewsPostForm />

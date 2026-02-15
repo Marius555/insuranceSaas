@@ -21,7 +21,7 @@ export default async function PricingPage() {
   }
 
   return (
-    <div className="animate-page-enter">
+    <div>
       <Header session={session} userDoc={userDoc} />
       <main>
         <PricingSection session={session} userDoc={userDoc} />

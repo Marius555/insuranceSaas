@@ -20,6 +20,8 @@ export function NavigationTracker() {
       if (!anchor) return;
       const href = anchor.getAttribute("href");
       if (!href || href.startsWith("http") || href.startsWith("mailto:")) return;
+      // Skip page transition for settings tab navigation
+      if (anchor.hasAttribute("data-settings-tab")) return;
       // Stage intent — no CSS effect
       html.dataset.navPending = "forward";
     }

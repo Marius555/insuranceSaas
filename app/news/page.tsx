@@ -77,7 +77,7 @@ export default async function NewsPage() {
   const isAdmin = userDoc?.role === "admin";
 
   return (
-    <div className="animate-page-enter">
+    <div>
       <Header session={session} userDoc={userDoc} />
       <main>
         <NewsListing posts={posts} isAdmin={isAdmin} />

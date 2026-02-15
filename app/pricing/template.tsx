@@ -3,7 +3,7 @@
 import { useEffect, useRef } from "react";
 import { usePathname } from "next/navigation";
 
-export default function ReportsTemplate({
+export default function PricingTemplate({
   children,
 }: {
   children: React.ReactNode;
@@ -14,7 +14,6 @@ export default function ReportsTemplate({
   useEffect(() => {
     const el = ref.current;
     if (!el) return;
-    // Wait one frame so the browser has painted the new content
     requestAnimationFrame(() => {
       el.classList.add("animate-page-enter-active");
     });

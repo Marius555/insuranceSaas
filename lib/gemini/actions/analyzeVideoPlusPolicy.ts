@@ -106,7 +106,9 @@ CRITICAL ANTI-HALLUCINATION INSTRUCTION - READ FIRST
 ═══════════════════════════════════════════════════════════════════
 
 When extracting vehicle identification details (license plate, VIN, make, model, year, color):
-- ONLY include values you can CLEARLY see and read in the video or policy document
+- For videoVehicle: ONLY include values you can CLEARLY see in the VIDEO/IMAGES. NEVER copy or infer from the policy document.
+- For policyVehicle: ONLY include values explicitly written in the POLICY DOCUMENT. NEVER use what you observed in the video/images to fill in policy fields.
+- These two sources MUST be treated as completely independent — this is the foundation of fraud detection.
 - If ANY detail is unclear, not visible, partially obscured, or uncertain, you MUST set it to null
 - NEVER guess, infer, assume, or use example/placeholder values
 - NEVER use these example values: "ABC123", "ABC-123", "XYZ789", "1HGBH41JXMN109186"
@@ -215,6 +217,19 @@ Based on the visible external damage, infer possible internal/mechanical damage 
 
 ### STEP 2: VIDEO ANALYSIS - Vehicle Identification (CRITICAL for fraud prevention)
 Extract ALL visible vehicle identification details from the video:
+
+**⚠️ SOURCE ISOLATION RULE — CRITICAL FOR FRAUD DETECTION:**
+You MUST identify the vehicle in the video/images using ONLY visual evidence. DO NOT use ANY information from the policy document for this step. The entire purpose of vehicle verification is to INDEPENDENTLY identify the vehicle from two separate sources and compare them.
+
+Specific rules:
+- **Make/Model**: Identify ONLY from visible badges, emblems, grille design, body shape. If no badges are readable and you cannot confidently identify the make/model from body design alone → set to null. DO NOT use the make/model from the policy.
+- **Year**: Determine ONLY from body style, headlight/taillight design, generation cues. DO NOT use the year from the policy. DO NOT confuse a policy signing date, effective date, or renewal date with the vehicle's model year.
+- **License plate**: Read ONLY from what's visible on the vehicle in the video/images.
+- **VIN**: Read ONLY from what's visible through the windshield or on door jamb in the video/images.
+- **Color**: Determine ONLY from what you see in the video/images.
+
+If you cannot determine a field from the video/images alone → set it to null. A null is CORRECT and EXPECTED when visual evidence is insufficient. Using policy data to fill in video fields is a CRITICAL ERROR that breaks fraud detection.
+
 1. **License plate number** - Look carefully at front/rear plates in video (null if not visible)
 2. **VIN (Vehicle Identification Number)** - Check if visible through windshield (null if not visible)
 3. **Make and Model** - Identify brand and model from badges (null if not readable)
@@ -234,10 +249,16 @@ Review the insurance policy document and extract:
 
 ### STEP 4: POLICY ANALYSIS - Insured Vehicle Details
 Extract the insured vehicle information from the policy:
+
+**⚠️ SOURCE ISOLATION RULE — CRITICAL FOR FRAUD DETECTION:**
+You MUST extract vehicle details ONLY from the policy document text. DO NOT use ANY information you observed in the video/images for this step. If a field (make, model, color, year, etc.) is not explicitly stated in the policy document, set it to null. DO NOT fill in gaps using what you saw in the video — that breaks fraud detection.
+
 1. **License plate number** - Registered plate number
 2. **VIN** - Vehicle identification number
 3. **Make and Model** - Manufacturer and model name
-4. **Year** - Model year
+4. **Year** - The vehicle's MODEL YEAR (manufacturing year), NOT the policy signing date, effective date, start date, or renewal date. Look for fields explicitly labeled "model year", "year of manufacture", "vehicle year", or similar. If the policy only shows dates related to the policy period (effective date, expiration date, signing date, renewal date), those are NOT the vehicle year — set year to null.
+   **Example**: Policy says "Effective Date: 01/01/2025" or "Policy Year: 2025" → this is NOT the vehicle model year → year: null.
+   **Example**: Policy says "Vehicle Year: 2019" or "Model Year: 2019" → year: 2019.
 5. **Color** - Registered color
 6. **Any other identifying information**
 
@@ -320,12 +341,12 @@ Example showing proper use of null for undetected fields:
       "color": "Blue"        // Example: Clearly visible
     },
     "policyVehicle": {
-      // Extracted from policy document - use null if field missing
+      // ONLY from policy document text — DO NOT use video/image observations
       "licensePlate": "[VALUE_FROM_POLICY]" | null,
       "vin": "[17_CHAR_VIN_FROM_POLICY]" | null,
       "make": "[MAKE_FROM_POLICY]" | null,
       "model": "[MODEL_FROM_POLICY]" | null,
-      "year": [YEAR_NUMBER] | null,
+      "year": [VEHICLE_MODEL_YEAR] | null,  // ONLY the vehicle's model year, NOT policy dates
       "color": "[COLOR_FROM_POLICY]" | null
     },
     "verificationStatus": "matched" | "mismatched" | "insufficient_data",
@@ -413,25 +434,26 @@ Return ONLY valid JSON (no markdown) with this exact structure:
 
   "vehicleVerification": {
     "videoVehicle": {
-      "licensePlate": null,  // Not clearly visible in video
+      "licensePlate": null,  // Not visible in video frames
       "vin": null,           // Not visible in video
-      "make": "Ford",        // Brand badge visible on front grille
-      "model": "Escape",     // Model badge visible on tailgate
-      "year": 2018,          // Determined from 3rd gen body style (2017-2019)
-      "color": "White"       // Clearly visible
+      "make": "Toyota",      // Badge visible on front grille
+      "model": null,         // Model badge not readable in video
+      "year": null,          // Cannot determine exact year from video
+      "color": "Silver"      // Clearly visible in video
     },
     "policyVehicle": {
+      // ONLY from policy document text — DO NOT use video/image observations
       "licensePlate": null,  // Not listed in policy document
       "vin": null,           // Not found in provided policy pages
       "make": "Ford",        // Listed in policy
       "model": "Escape",     // Listed in policy
-      "year": 2018,          // Listed in policy
-      "color": "White"       // Listed as "Oxford White"
+      "year": 2018,          // Listed in policy as vehicle model year
+      "color": "Oxford White" // Listed in policy
     },
     "verificationStatus": "insufficient_data",
     "mismatches": [],
-    "confidenceScore": 0.60,
-    "notes": "Cannot verify vehicle identity - neither license plate nor VIN available for comparison. Make/model/year/color match but are insufficient for positive identification."
+    "confidenceScore": 0.30,
+    "notes": "Video shows a Silver Toyota but model/year not confirmed from video. Policy lists a 2018 Ford Escape in Oxford White. Cannot verify identity — neither plate nor VIN visible in video, and make/color differ between sources. Insufficient unique identifiers for positive match or definitive mismatch."
   },
 
   "policyAnalysis": {
