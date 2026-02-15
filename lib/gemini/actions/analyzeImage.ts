@@ -174,6 +174,12 @@ For ALL metal surfaces visible, note:
 - Spread pattern (localized vs spreading)
 - Depth (surface rust vs pitting vs structural)
 
+### PER-PART COST ESTIMATES
+For each damaged part, provide:
+- **Estimated repair cost RANGE for each part** (e.g., "$500 - $800")
+- Consider parts cost + labor for repair or replacement
+- Use realistic market pricing for auto body work
+
 Return a JSON object with the following structure:
 {
   "damagedParts": [
@@ -181,6 +187,9 @@ Return a JSON object with the following structure:
       "part": "front bumper",
       "severity": "moderate",
       "description": "Cracked plastic with paint damage visible in front-view image",
+      "estimatedRepairCost": "$500 - $800",
+      "repairOrReplace": "replace",
+      "repairOrReplaceReason": "Crack extends across full width, making repair impractical",
       "damageAge": "fresh",
       "ageIndicators": ["Shiny exposed metal", "No oxidation visible"],
       "rustPresent": false,

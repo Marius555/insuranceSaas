@@ -192,7 +192,7 @@ export function useVideoRecorder(
         const elapsed = Math.floor((Date.now() - startTimeRef.current) / 1000);
         setDuration(elapsed);
 
-        if (elapsed >= maxDurationSeconds) {
+        if (maxDurationSeconds && elapsed >= maxDurationSeconds) {
           stopRecording();
           onMaxDurationReached?.();
         }

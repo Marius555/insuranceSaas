@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useMounted } from "@/hooks/use-mounted";
 import { useTheme } from "next-themes";
 import { HugeiconsIcon } from "@hugeicons/react";
-import { Menu01Icon, MultiplicationSignIcon, Shield01Icon, Sun03Icon, Moon02Icon } from "@hugeicons/core-free-icons";
+import { Menu01Icon, MultiplicationSignIcon, Shield01Icon, Sun03Icon, Moon02Icon, ArrowRight03Icon } from "@hugeicons/core-free-icons";
 import { Button } from "@/components/ui/button";
 import { GoogleSignInModal } from "@/components/auth/google-signin-modal";
 import type { UserDocument } from "@/lib/types/appwrite";
@@ -113,7 +113,8 @@ export function Header({ session, userDoc }: HeaderProps) {
             </form>
           ) : (
             <Button onClick={() => setShowSignInModal(true)}>
-              Sign In
+              SIGN UP
+              <HugeiconsIcon icon={ArrowRight03Icon}  strokeWidth={2.2} />
             </Button>
           )}
         </div>

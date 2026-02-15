@@ -417,6 +417,8 @@ Return ONLY valid JSON (no markdown) with this exact structure:
       "severity": "severe",
       "description": "detailed description",
       "estimatedRepairCost": "$1,200 - $1,800",
+      "repairOrReplace": "replace",
+      "repairOrReplaceReason": "Severe structural cracking makes repair impractical; full replacement needed",
       "damageAge": "fresh",
       "ageIndicators": ["Shiny exposed metal", "Clean paint edges"],
       "rustPresent": false,

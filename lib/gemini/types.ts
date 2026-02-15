@@ -100,6 +100,7 @@ export interface VideoAnalysisInput {
   temperature?: number;
   seed?: number;
   responseFormat?: 'text' | 'json';
+  supplementaryImages?: Array<{ base64: string; mimeType: string }>;
 }
 
 export interface PDFAnalysisInput {
@@ -137,6 +138,8 @@ export interface DamagedPart {
   severity: 'minor' | 'moderate' | 'severe'; // Must match database schema constraint
   description: string;
   estimatedRepairCost?: string; // Cost range e.g., "$500 - $800"
+  repairOrReplace?: 'repair' | 'replace' | 'either' | 'undetermined';
+  repairOrReplaceReason?: string;
   // Fraud detection fields
   damageAge?: 'fresh' | 'days_old' | 'weeks_old' | 'months_old' | 'unknown';
   ageIndicators?: string[];

@@ -36,6 +36,7 @@ export interface SubmitReportInput {
 
   // Files (from client as File objects)
   mediaFiles: File[]; // Images or single video
+  supplementaryPhotos?: File[]; // Optional guided mode photos (sent alongside video to Gemini)
   policyFile?: File; // Optional policy PDF (new upload)
   existingPolicyFileId?: string; // Optional existing policy file ID (reuse previous)
 
@@ -129,9 +130,20 @@ export async function submitReport(
 
     let mediaBase64: Array<{ base64: string; mimeType: string; filename: string }>;
     let policyBase64: string | undefined;
+    let supplementaryImagesBase64: Array<{ base64: string; mimeType: string }> | undefined;
 
     try {
       mediaBase64 = await convertFilesToBase64Server(input.mediaFiles);
+
+      // Convert supplementary photos to base64 for Gemini
+      if (input.supplementaryPhotos && input.supplementaryPhotos.length > 0) {
+        const photoBase64 = await convertFilesToBase64Server(input.supplementaryPhotos);
+        supplementaryImagesBase64 = photoBase64.map(p => ({
+          base64: p.base64,
+          mimeType: p.mimeType,
+        }));
+        console.log(`📸 Converted ${supplementaryImagesBase64.length} supplementary photos to base64`);
+      }
 
       if (input.policyFile) {
         // New policy file upload
@@ -196,7 +208,8 @@ export async function submitReport(
               input.userCountry,
               input.userCurrency,
               input.userCurrencySymbol,
-              input.videoQualityMetadata
+              input.videoQualityMetadata,
+              supplementaryImagesBase64
             ),
             GEMINI_TIMEOUT_MS,
             'AI analysis timed out. Please try again with a shorter video or fewer images.'
@@ -234,7 +247,8 @@ export async function submitReport(
               input.userCountry,
               input.userCurrency,
               input.userCurrencySymbol,
-              input.videoQualityMetadata
+              input.videoQualityMetadata,
+              supplementaryImagesBase64
             ),
             GEMINI_TIMEOUT_MS,
             'AI analysis timed out. Please try again with a shorter video.'
@@ -299,7 +313,12 @@ export async function submitReport(
     // This way, if Gemini fails, we haven't wasted time uploading
     console.log('📤 Step 3: Uploading files to storage...');
 
-    const mediaUploadResult = await uploadMediaFiles(input.mediaFiles);
+    // Upload video/images + supplementary photos together
+    const allMediaFiles = [
+      ...input.mediaFiles,
+      ...(input.supplementaryPhotos || []),
+    ];
+    const mediaUploadResult = await uploadMediaFiles(allMediaFiles);
     if (!mediaUploadResult.success) {
       return {
         success: false,
@@ -400,6 +419,17 @@ async function cleanupUploadedFiles(
   await Promise.allSettled(deletePromises);
 }
 
+/** Parse "$500 - $800" or "$1,200" into a numeric midpoint */
+function parseCostRange(cost: unknown): number | null {
+  if (typeof cost !== 'string') return null;
+  const numbers = cost.match(/[\d,]+(\.\d+)?/g);
+  if (!numbers || numbers.length === 0) return null;
+  const parsed = numbers.map(n => parseFloat(n.replace(/,/g, '')));
+  const valid = parsed.filter(n => !isNaN(n));
+  if (valid.length === 0) return null;
+  return valid.reduce((a, b) => a + b, 0) / valid.length;
+}
+
 /**
  * Convert basic AutoDamageAnalysis to EnhancedAutoDamageAnalysis
  * Fills in default values for policy-related fields
@@ -415,8 +445,8 @@ function convertToEnhancedAnalysis(
     // NOTE: 'unknown' severity is normalized to 'moderate' in normalizeSeverity()
     estimatedTotalRepairCost = basic.damagedParts.reduce((total, part) => {
       // Use provided cost or estimate based on severity
-      const cost =
-        (part as any).estimatedRepairCost ||
+      const parsedCost = parseCostRange((part as any).estimatedRepairCost);
+      const cost = parsedCost ??
         (part.severity === 'severe' ? 2000
           : part.severity === 'moderate' ? 800
           : 300); // minor

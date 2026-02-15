@@ -21,6 +21,7 @@ import { HugeiconsIcon } from "@hugeicons/react";
 import { ReportUploadModal } from "@/components/dashboardComponents/report-upload-modal";
 import { FilmVideoButton } from "@/components/dashboardComponents/film-video-button";
 import { NotificationBell } from "@/components/notifications/notification-bell";
+import { UserAvatarMenu } from "@/components/dashboardComponents/user-avatar-menu";
 import { useUser } from "@/lib/context/user-context";
 import { useRouter } from "next/navigation";
 import { useEffect } from "react";
@@ -58,30 +59,36 @@ export default function UserDashboard() {
             </BreadcrumbList>
           </Breadcrumb>
         </div>
-        <div className="pr-4">
+        <div className="flex items-center gap-1 pr-4">
           <NotificationBell />
+          <UserAvatarMenu />
         </div>
       </header>
 
       <div className="flex flex-1 flex-col gap-4 p-4 pt-0">
         <Empty>
-          <EmptyHeader className="flex flex-col gap-2">
-            <EmptyMedia variant="icon">
+          <EmptyHeader className="flex flex-col items-center gap-2 animate-fade-in-up">
+            <EmptyMedia
+              variant="icon"
+              className="mb-0 size-12 rounded-full bg-primary/10 text-primary ring-8 ring-primary/5 [&_svg:not([class*='size-'])]:size-6"
+            >
               <HugeiconsIcon icon={FileEmpty02Icon} />
             </EmptyMedia>
             <EmptyTitle>Submit a New Report</EmptyTitle>
             <EmptyDescription>
               Record a video or upload media to submit a new damage report. Our AI will analyze the damage automatically.
             </EmptyDescription>
+            <div className="mt-2 flex w-full gap-2">
+              <div className="flex-1 md:hidden">
+                <FilmVideoButton className="w-full" />
+              </div>
+              <ReportUploadModal>
+                <Button variant="secondary" className="flex-1 w-full">
+                  <HugeiconsIcon icon={AttachmentIcon} /> Upload video
+                </Button>
+              </ReportUploadModal>
+            </div>
           </EmptyHeader>
-          <div className="mt-4 flex gap-2">
-            <FilmVideoButton />
-            <ReportUploadModal>
-              <Button variant="secondary">
-                <HugeiconsIcon icon={AttachmentIcon} /> Upload video
-              </Button>
-            </ReportUploadModal>
-          </div>
         </Empty>
       </div>
     </SidebarInset>

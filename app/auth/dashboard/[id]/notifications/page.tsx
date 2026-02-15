@@ -16,6 +16,7 @@ import {
 } from "@/components/ui/empty";
 import { Button } from "@/components/ui/button";
 import { NotificationBell } from "@/components/notifications/notification-bell";
+import { UserAvatarMenu } from "@/components/dashboardComponents/user-avatar-menu";
 import { NotificationsListClient } from "@/components/notifications/notifications-list-client";
 import { getPaginatedNotifications } from "@/appwrite/getPaginatedNotifications";
 import Link from "next/link";
@@ -43,8 +44,8 @@ export default async function NotificationsPage({ params }: { params: Promise<{ 
           <Breadcrumb>
             <BreadcrumbList>
               <BreadcrumbItem className="hidden md:block">
-                <BreadcrumbLink href={`/auth/dashboard/${userId}`}>
-                  Dashboard
+                <BreadcrumbLink asChild>
+                  <Link href={`/auth/dashboard/${userId}`}>Dashboard</Link>
                 </BreadcrumbLink>
               </BreadcrumbItem>
               <BreadcrumbSeparator className="hidden md:block" />
@@ -54,8 +55,9 @@ export default async function NotificationsPage({ params }: { params: Promise<{ 
             </BreadcrumbList>
           </Breadcrumb>
         </div>
-        <div className="pr-4">
+        <div className="flex items-center gap-1 pr-4">
           <NotificationBell />
+          <UserAvatarMenu />
         </div>
       </header>
 

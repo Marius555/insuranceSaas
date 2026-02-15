@@ -32,7 +32,8 @@ export async function analyzeAutoDamageWithPolicy(
   userCountry?: string,
   userCurrency?: string,
   userCurrencySymbol?: string,
-  videoQualityMetadata?: VideoQualityMetadata
+  videoQualityMetadata?: VideoQualityMetadata,
+  supplementaryImages?: Array<{ base64: string; mimeType: string }>
 ): Promise<GeminiResult<{ analysis: EnhancedAutoDamageAnalysis }>> {
   try {
     // Normalize MIME type: strip codec suffix (e.g., "video/webm;codecs=vp8" -> "video/webm")
@@ -94,7 +95,11 @@ This is forensic-quality footage. Pay attention to fine details like small scrat
 paint depth damage, rust nucleation points, and VIN/plate visibility.
 ` : '';
 
-    const prompt = `${CONSISTENCY_INSTRUCTION}${VIDEO_QUALITY_CONTEXT}${LOCALIZED_PRICING_CONTEXT}
+    const SUPPLEMENTARY_CONTEXT = supplementaryImages && supplementaryImages.length > 0
+      ? `\nSUPPLEMENTARY PHOTOS:\nYou are provided with a video walkthrough AND ${supplementaryImages.length} close-up photos captured at specific angles. Use BOTH for your analysis. The photos provide higher-detail views of specific areas.\n`
+      : '';
+
+    const prompt = `${CONSISTENCY_INSTRUCTION}${VIDEO_QUALITY_CONTEXT}${LOCALIZED_PRICING_CONTEXT}${SUPPLEMENTARY_CONTEXT}
 
 ═══════════════════════════════════════════════════════════════════
 CRITICAL ANTI-HALLUCINATION INSTRUCTION - READ FIRST
@@ -187,6 +192,8 @@ For each damaged part, include:
 - ageIndicators: Array of observed indicators
 - rustPresent: boolean
 - preExisting: boolean
+- repairOrReplace: "repair" | "replace" | "either" | "undetermined"
+- repairOrReplaceReason: Brief explanation of why repair or replacement is recommended
 
 ### STEP 1.6: INFERRED INTERNAL DAMAGE ANALYSIS
 
@@ -382,6 +389,8 @@ Return ONLY valid JSON (no markdown) with this exact structure:
       "severity": "severe",
       "description": "detailed description",
       "estimatedRepairCost": "$1,200 - $1,800",
+      "repairOrReplace": "replace",
+      "repairOrReplaceReason": "Severe structural cracking makes repair impractical; full replacement needed",
       "damageAge": "fresh",
       "ageIndicators": ["Shiny exposed metal", "Clean paint edges"],
       "rustPresent": false,
@@ -568,25 +577,40 @@ IMPORTANT: Do NOT convert insurance terms to numbers. Return them as strings exa
     const apiCall = async (client: any, modelName: string) => {
       console.log(`🎯 Attempting video+policy analysis with model: ${modelName}`);
 
+      // Build content parts: prompt + video + policy + optional supplementary images
+      const parts: Array<{ text: string } | { inlineData: { mimeType: string; data: string } }> = [
+        { text: prompt },
+        {
+          inlineData: {
+            mimeType: normalizedMimeType,
+            data: videoBase64,
+          },
+        },
+        {
+          inlineData: {
+            mimeType: 'application/pdf',
+            data: policyBase64,
+          },
+        },
+      ];
+
+      // Add supplementary images if provided (from guided mode captures)
+      if (supplementaryImages && supplementaryImages.length > 0) {
+        for (const img of supplementaryImages) {
+          parts.push({
+            inlineData: {
+              mimeType: img.mimeType,
+              data: img.base64,
+            },
+          });
+        }
+      }
+
       const response = await client.models.generateContent({
         model: modelName,
         contents: [
           {
-            parts: [
-              { text: prompt },
-              {
-                inlineData: {
-                  mimeType: normalizedMimeType,
-                  data: videoBase64,
-                },
-              },
-              {
-                inlineData: {
-                  mimeType: 'application/pdf',
-                  data: policyBase64,
-                },
-              },
-            ],
+            parts,
           },
         ],
         config: {

@@ -1,4 +1,5 @@
 import { notFound, redirect } from 'next/navigation';
+import { cn } from '@/lib/utils';
 import { getSession } from '@/appwrite/getSession';
 import { getReportById } from '@/appwrite/getReport';
 import { getUserDocumentCached } from '@/lib/data/cached-queries';
@@ -23,6 +24,8 @@ import {
   SidebarTrigger,
 } from "@/components/ui/sidebar";
 import { NotificationBell } from "@/components/notifications/notification-bell";
+import { UserAvatarMenu } from "@/components/dashboardComponents/user-avatar-menu";
+import Link from "next/link";
 
 interface ReportPageProps {
   params: Promise<{ id: string }>;
@@ -128,14 +131,14 @@ export default async function ReportPage({ params }: ReportPageProps) {
             <Breadcrumb>
               <BreadcrumbList>
                 <BreadcrumbItem className="hidden md:block">
-                  <BreadcrumbLink href={`/auth/dashboard/${session.id}`}>
-                    Dashboard
+                  <BreadcrumbLink asChild>
+                    <Link href={`/auth/dashboard/${session.id}`}>Dashboard</Link>
                   </BreadcrumbLink>
                 </BreadcrumbItem>
                 <BreadcrumbSeparator className="hidden md:block" />
                 <BreadcrumbItem className="hidden md:block">
-                  <BreadcrumbLink href={`/auth/dashboard/${session.id}/reports`}>
-                    Reports
+                  <BreadcrumbLink asChild>
+                    <Link href={`/auth/dashboard/${session.id}/reports`}>Reports</Link>
                   </BreadcrumbLink>
                 </BreadcrumbItem>
                 <BreadcrumbSeparator className="hidden md:block" />
@@ -145,8 +148,9 @@ export default async function ReportPage({ params }: ReportPageProps) {
               </BreadcrumbList>
             </Breadcrumb>
           </div>
-          <div className="pr-4">
+          <div className="flex items-center gap-1 pr-4">
             <NotificationBell />
+            <UserAvatarMenu />
           </div>
         </header>
 
@@ -158,13 +162,8 @@ export default async function ReportPage({ params }: ReportPageProps) {
               {report.claim_number}
             </h1>
 
-            <div className="flex items-center justify-between gap-2">
-              {/* Date - left side */}
-              <span className="text-sm text-muted-foreground whitespace-nowrap">
-                {new Date(report.analysis_timestamp).toLocaleDateString()}
-              </span>
-
-              {/* Action buttons - right side */}
+            <div className="flex items-center justify-end gap-2">
+              {/* Action buttons */}
               <div className="flex items-center gap-2 flex-wrap">
                 <ReportFeedbackButton reportId={report.$id} />
 
@@ -219,13 +218,98 @@ export default async function ReportPage({ params }: ReportPageProps) {
             </div>
           </div>
 
+          {/* Total Loss Indicator */}
+          {(() => {
+            const repairCost = report.estimated_total_repair_cost || 0;
+            const isTotalLoss = report.overall_severity === 'total_loss';
+            // Estimate vehicle value from assessment data if available
+            const coveredAmount = assessment?.covered_amount || 0;
+            const totalEstimate = assessment?.total_repair_estimate || repairCost;
+            // Total loss threshold: repair cost exceeds 70% of estimated vehicle value
+            // Use covered_amount as proxy for vehicle value when available
+            const vehicleValueEstimate = coveredAmount > totalEstimate ? coveredAmount * 1.3 : 0;
+            const totalLossRatio = vehicleValueEstimate > 0 ? (totalEstimate / vehicleValueEstimate) * 100 : 0;
+            const isNearTotalLoss = totalLossRatio >= 70 && !isTotalLoss;
+
+            if (!isTotalLoss && !isNearTotalLoss) return null;
+
+            return (
+              <div className={cn(
+                "rounded-lg border-2 p-4",
+                isTotalLoss
+                  ? "border-red-300 bg-red-50 dark:border-red-800 dark:bg-red-950/40"
+                  : "border-orange-300 bg-orange-50 dark:border-orange-800 dark:bg-orange-950/40"
+              )}>
+                <div className="flex items-start gap-3">
+                  <div className={cn(
+                    "w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0",
+                    isTotalLoss
+                      ? "bg-red-100 dark:bg-red-900/50"
+                      : "bg-orange-100 dark:bg-orange-900/50"
+                  )}>
+                    <HugeiconsIcon icon={AlertCircleIcon} size={20} className={
+                      isTotalLoss ? "text-red-600 dark:text-red-400" : "text-orange-600 dark:text-orange-400"
+                    } />
+                  </div>
+                  <div>
+                    <h3 className={cn(
+                      "text-sm font-bold",
+                      isTotalLoss
+                        ? "text-red-900 dark:text-red-300"
+                        : "text-orange-900 dark:text-orange-300"
+                    )}>
+                      {isTotalLoss ? "Total Loss Determination" : "Near Total Loss Warning"}
+                    </h3>
+                    <p className={cn(
+                      "text-sm mt-1",
+                      isTotalLoss
+                        ? "text-red-700 dark:text-red-400"
+                        : "text-orange-700 dark:text-orange-400"
+                    )}>
+                      {isTotalLoss
+                        ? "The AI assessment has determined this vehicle is a total loss. Repair costs exceed the vehicle's value, making replacement more economical than repair."
+                        : `Repair costs represent approximately ${totalLossRatio.toFixed(0)}% of the estimated vehicle value, approaching the typical total loss threshold (70-80%). A professional appraisal is recommended.`
+                      }
+                    </p>
+                  </div>
+                </div>
+              </div>
+            );
+          })()}
+
+          {/* Estimated Repair Cost Summary */}
+          {report.estimated_total_repair_cost > 0 && !assessment && (
+            <div className="bg-card rounded-lg border border-border overflow-hidden">
+              <div className="bg-muted px-4 py-2 border-b border-border">
+                <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">
+                  Estimated Repair Cost
+                </h2>
+              </div>
+              <div className="px-4 py-4 flex items-center justify-between">
+                <span className="text-sm text-muted-foreground">Total Estimated Cost</span>
+                <CurrencyAmount
+                  amount={report.estimated_total_repair_cost}
+                  className="text-lg font-bold text-foreground"
+                />
+              </div>
+              <div className="px-4 pb-3">
+                <p className="text-xs text-muted-foreground">
+                  This is an AI-generated estimate. Actual repair costs may vary. No insurance policy was provided for this report.
+                </p>
+              </div>
+            </div>
+          )}
+
           {/* Unified Table */}
           <div className="bg-card rounded-lg border border-border overflow-hidden">
             {/* Report Overview Section */}
-            <div className="bg-muted px-4 py-2 border-b border-border">
+            <div className="bg-muted px-4 py-2 border-b border-border flex items-center justify-between">
               <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">
                 Report Overview
               </h2>
+              <span className="text-sm text-muted-foreground">
+                {new Date(report.analysis_timestamp).toLocaleDateString()}
+              </span>
             </div>
             <div className="divide-y divide-border">
               <div className="flex justify-between items-center px-4 py-3">
@@ -470,16 +554,36 @@ export default async function ReportPage({ params }: ReportPageProps) {
                       <div className="flex items-center justify-between mb-1">
                         <div className="flex items-center gap-2">
                           <span className="text-sm font-medium text-foreground">{detail.part_name}</span>
-                          {detail.estimated_repair_cost && (
-                            <span className="text-sm text-muted-foreground">({detail.estimated_repair_cost})</span>
-                          )}
                         </div>
-                        <Badge className={getSeverityColor(detail.severity)}>
-                          {detail.severity}
-                        </Badge>
+                        <div className="flex items-center gap-1.5">
+                          {detail.repair_or_replace && detail.repair_or_replace !== 'undetermined' && (
+                            <Badge className={
+                              detail.repair_or_replace === 'replace'
+                                ? 'bg-red-100 text-red-800 dark:bg-red-900/50 dark:text-red-300'
+                                : detail.repair_or_replace === 'repair'
+                                  ? 'bg-blue-100 text-blue-800 dark:bg-blue-900/50 dark:text-blue-300'
+                                  : 'bg-muted text-muted-foreground'
+                            }>
+                              {detail.repair_or_replace}
+                            </Badge>
+                          )}
+                          <Badge className={getSeverityColor(detail.severity)}>
+                            {detail.severity}
+                          </Badge>
+                        </div>
                       </div>
+                      {detail.estimated_repair_cost && (
+                        <div className="mt-1">
+                          <span className="text-sm font-semibold text-foreground">{detail.estimated_repair_cost}</span>
+                        </div>
+                      )}
                       {detail.description && (
-                        <p className="text-sm text-muted-foreground">{detail.description}</p>
+                        <p className="text-sm text-muted-foreground mt-1">{detail.description}</p>
+                      )}
+                      {detail.repair_or_replace_reason && (
+                        <p className="text-xs text-muted-foreground mt-1 italic">
+                          {detail.repair_or_replace_reason}
+                        </p>
                       )}
                     </div>
                   ))}

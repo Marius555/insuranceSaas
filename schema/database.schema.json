@@ -434,6 +434,18 @@
           "required": false
         },
         {
+          "key": "repair_or_replace",
+          "type": "enum",
+          "elements": ["repair", "replace", "either", "undetermined"],
+          "required": false
+        },
+        {
+          "key": "repair_or_replace_reason",
+          "type": "string",
+          "size": 500,
+          "required": false
+        },
+        {
           "key": "sort_order",
           "type": "integer",
           "required": true,

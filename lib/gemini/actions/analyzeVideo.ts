@@ -46,19 +46,34 @@ export async function analyzeVideo(
     const apiCall = async (client: any, modelName: string) => {
       console.log(`🎯 Attempting video analysis with model: ${modelName}`);
 
+      // Build content parts: prompt + video + optional supplementary images
+      const parts: Array<{ text: string } | { inlineData: { mimeType: string; data: string } }> = [
+        { text: input.prompt },
+        {
+          inlineData: {
+            mimeType: normalizedMimeType,
+            data: videoBase64,
+          },
+        },
+      ];
+
+      // Add supplementary images if provided (from guided mode captures)
+      if (input.supplementaryImages && input.supplementaryImages.length > 0) {
+        for (const img of input.supplementaryImages) {
+          parts.push({
+            inlineData: {
+              mimeType: img.mimeType,
+              data: img.base64,
+            },
+          });
+        }
+      }
+
       const response = await client.models.generateContent({
         model: modelName,
         contents: [
           {
-            parts: [
-              { text: input.prompt },
-              {
-                inlineData: {
-                  mimeType: normalizedMimeType,
-                  data: videoBase64,
-                },
-              },
-            ],
+            parts,
           },
         ],
         config: {
@@ -230,7 +245,8 @@ export async function analyzeAutoDamage(
   userCountry?: string,
   userCurrency?: string,
   userCurrencySymbol?: string,
-  videoQualityMetadata?: VideoQualityMetadata
+  videoQualityMetadata?: VideoQualityMetadata,
+  supplementaryImages?: Array<{ base64: string; mimeType: string }>
 ): Promise<GeminiResult<{ analysis: AutoDamageAnalysis }>> {
   // Build localized pricing context if country is provided
   const currency = userCurrency || 'USD';
@@ -260,7 +276,11 @@ paint depth damage, rust nucleation points, and VIN/plate visibility.
 
 ` : '';
 
-  const prompt = `${videoQualityContext}${localizedPricingContext}You are an expert auto damage assessor. Analyze this vehicle damage video and provide a structured assessment.
+  const supplementaryContext = supplementaryImages && supplementaryImages.length > 0
+    ? `\nSUPPLEMENTARY PHOTOS:\nYou are provided with a video walkthrough AND ${supplementaryImages.length} close-up photos captured at specific angles. Use BOTH for your analysis. The photos provide higher-detail views of specific areas.\n\n`
+    : '';
+
+  const prompt = `${videoQualityContext}${localizedPricingContext}${supplementaryContext}You are an expert auto damage assessor. Analyze this vehicle damage video and provide a structured assessment.
 
 ### DAMAGE AGE ANALYSIS (CRITICAL FOR FRAUD DETECTION)
 For each damaged area, assess whether the damage appears FRESH or OLD:
@@ -319,6 +339,20 @@ For ALL metal surfaces visible, note:
 - Spread pattern (localized vs spreading)
 - Depth (surface rust vs pitting vs structural)
 
+### REPAIR OR REPLACE RECOMMENDATION
+For each damaged part, recommend whether to REPAIR or REPLACE:
+- "repair" — Damage can be fixed without replacing the entire part (dents, scratches, minor cracks)
+- "replace" — Part is beyond economical repair and should be replaced entirely
+- "either" — Both options are viable; cost difference is marginal
+- "undetermined" — Cannot determine from video alone
+Include brief reasoning for each recommendation.
+
+### PER-PART COST ESTIMATES
+For each damaged part, provide:
+- **Estimated repair cost RANGE for each part** (e.g., "$500 - $800")
+- Consider parts cost + labor for repair or replacement
+- Use realistic market pricing for auto body work
+
 Return a JSON object with the following structure:
 {
   "damagedParts": [
@@ -326,6 +360,9 @@ Return a JSON object with the following structure:
       "part": "front bumper",
       "severity": "moderate",
       "description": "Cracked plastic with paint damage",
+      "estimatedRepairCost": "$500 - $800",
+      "repairOrReplace": "replace",
+      "repairOrReplaceReason": "Crack extends across full width of bumper cover, making repair structurally unsound",
       "damageAge": "fresh",
       "ageIndicators": ["Shiny exposed metal", "No oxidation visible"],
       "rustPresent": false,
@@ -388,6 +425,7 @@ Provide thorough analysis based on visible damage in the video.`;
     model: GEMINI_MODELS.FLASH_LITE, // Fast and cost-effective
     temperature: 0.2, // Very factual
     responseFormat: 'json',
+    supplementaryImages,
   });
 
   // Type assertion: when responseFormat is 'json', analysis is always AutoDamageAnalysis

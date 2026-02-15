@@ -6,7 +6,7 @@ import { cn } from "@/lib/utils";
 interface RecordingControlsProps {
   isRecording: boolean;
   duration: number;
-  maxDuration: number;
+  maxDuration?: number;
   onStart: () => void;
   onStop: () => void;
   onCancel: () => void;
@@ -26,8 +26,8 @@ export function RecordingControls({
   onStop,
   onCancel,
 }: RecordingControlsProps) {
-  const progress = (duration / maxDuration) * 100;
-  const remainingSeconds = maxDuration - duration;
+  const progress = maxDuration ? (duration / maxDuration) * 100 : 0;
+  const remainingSeconds = maxDuration ? maxDuration - duration : Infinity;
 
   // Disable cancel during the transition between stop and preview
   // (recording stopped but video is still being processed)
@@ -39,9 +39,11 @@ export function RecordingControls({
       <div className="text-center">
         <div className="text-4xl font-mono font-bold tabular-nums">
           {formatTime(duration)}
-          <span className="text-muted-foreground"> / {formatTime(maxDuration)}</span>
+          {maxDuration && (
+            <span className="text-muted-foreground"> / {formatTime(maxDuration)}</span>
+          )}
         </div>
-        {isRecording && remainingSeconds <= 5 && (
+        {isRecording && maxDuration && remainingSeconds <= 5 && (
           <p className="text-sm text-destructive mt-1 animate-pulse">
             {remainingSeconds} seconds remaining
           </p>

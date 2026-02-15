@@ -145,6 +145,8 @@ export interface ReportDamageDetailDocument extends Models.Document {
   severity: 'minor' | 'moderate' | 'severe'; // Database enum constraint (schema/database.schema.json:352)
   description: string;
   estimated_repair_cost?: string; // e.g., "$500 - $800"
+  repair_or_replace?: 'repair' | 'replace' | 'either' | 'undetermined';
+  repair_or_replace_reason?: string;
   sort_order: number;
   is_inferred?: boolean;
   inferred_likelihood?: string;

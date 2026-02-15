@@ -9,6 +9,7 @@ import {
   clearAuthRedirect,
   saveAuthRedirect,
   saveOnboardingFlow,
+  type OnboardingFlow,
 } from "@/lib/utils/auth-redirect-storage";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { Building06Icon, UserCircleIcon } from "@hugeicons/core-free-icons";
@@ -27,6 +28,7 @@ interface HeroWithUploadProps {
 export function HeroWithUpload({ session }: HeroWithUploadProps) {
   const router = useRouter();
   const [showSignInModal, setShowSignInModal] = useState(false);
+  const [flowType, setFlowType] = useState<OnboardingFlow | null>(null);
 
   // Handle auth redirects on mount
   useEffect(() => {
@@ -63,6 +65,7 @@ export function HeroWithUpload({ session }: HeroWithUploadProps) {
     if (session) {
       router.push(`/auth/dashboard/${session.id}`);
     } else {
+      setFlowType('user');
       setShowSignInModal(true);
     }
   };
@@ -72,6 +75,7 @@ export function HeroWithUpload({ session }: HeroWithUploadProps) {
     if (session) {
       router.push(`/auth/dashboard/${session.id}`);
     } else {
+      setFlowType('insurance');
       setShowSignInModal(true);
     }
   };
@@ -144,7 +148,8 @@ export function HeroWithUpload({ session }: HeroWithUploadProps) {
       {/* Google Sign-In Modal */}
       <GoogleSignInModal
         isOpen={showSignInModal}
-        onClose={() => setShowSignInModal(false)}
+        onClose={() => { setShowSignInModal(false); setFlowType(null); }}
+        flowType={flowType}
       />
     </>
   );

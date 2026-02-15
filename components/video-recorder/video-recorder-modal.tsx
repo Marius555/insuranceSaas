@@ -27,7 +27,9 @@ import { RecordingControls } from "./recording-controls";
 import { RecordingPreview } from "./recording-preview";
 import { PolicyUploadStep, type PolicySubmission } from "./policy-upload-step";
 import { SpeedAlert } from "./speed-alert";
+import { GuidedCaptureOverlay, GUIDED_CAPTURE_STEPS } from "./guided-capture-overlay";
 import { ProgressIndicator } from "@/components/gemini-analysis/progress-indicator";
+import { usePhotoCapture } from "@/hooks/use-photo-capture";
 import {
   compressVideoIfNeeded,
   needsCompression,
@@ -43,12 +45,15 @@ type ModalState =
   | "permission-prompt"
   | "permission-denied"
   | "ready"
+  | "mode-select"
   | "recording"
   | "processing" // After stop, before preview - bridges the async gap
   | "compressing"
   | "preview"
   | "policy-step"
   | "uploading";
+
+type CaptureMode = "guided" | "free";
 
 interface VideoRecorderModalProps {
   children: React.ReactNode;
@@ -77,6 +82,10 @@ export function VideoRecorderModal({
   const [wasCompressed, setWasCompressed] = useState(false);
   const [uploadStep, setUploadStep] = useState(1);
   const [qualitySeconds, setQualitySeconds] = useState(0);
+  const [captureMode, setCaptureMode] = useState<CaptureMode>("free");
+  const [guidedPhase, setGuidedPhase] = useState<'photos' | 'video'>('photos');
+  const [guidedStepIndex, setGuidedStepIndex] = useState(0);
+  const [guidedStepPhotoCount, setGuidedStepPhotoCount] = useState(0);
 
   // Track last duration for quality seconds calculation
   const lastDurationRef = useRef(0);
@@ -97,6 +106,14 @@ export function VideoRecorderModal({
     isMovingTooFast,
     requestPermission: requestMotionPermission,
   } = useMotionDetection({ enabled: modalState === "recording" });
+
+  // Photo capture for guided mode
+  const {
+    photos: capturedPhotos,
+    capturePhoto,
+    clearPhotos,
+    isCapturing: isPhotoCaptureInProgress,
+  } = usePhotoCapture();
 
   const {
     isRecording,
@@ -137,14 +154,14 @@ export function VideoRecorderModal({
       if (permissionState === "denied") {
         setModalState("permission-denied");
       } else if (permissionState === "granted" && stream) {
-        setModalState("ready");
+        setModalState("mode-select");
       }
     });
   }, [permissionState, stream]);
 
   // Connect stream to video element when ready
   useEffect(() => {
-    if ((modalState === "ready" || modalState === "recording") && stream && videoRef.current) {
+    if ((modalState === "ready" || modalState === "mode-select" || modalState === "recording") && stream && videoRef.current) {
       videoRef.current.srcObject = stream;
       videoRef.current.muted = true;
       videoRef.current.play().catch(() => {
@@ -201,6 +218,7 @@ export function VideoRecorderModal({
     // Enable NoSleep for all active states to prevent mobile browser throttling
     const shouldEnableNoSleep =
       modalState === "ready" ||
+      modalState === "mode-select" ||
       modalState === "recording" ||
       modalState === "processing" ||
       modalState === "compressing" ||
@@ -274,33 +292,77 @@ export function VideoRecorderModal({
         // Cleanup on close
         stopCamera();
         resetRecording();
+        clearPhotos();
         setModalState("permission-prompt");
         setProcessedFile(null);
         setWasCompressed(false);
         setUploadStep(1);
         setQualitySeconds(0);
+        setCaptureMode("free");
+        setGuidedPhase('photos');
+        setGuidedStepIndex(0);
+        setGuidedStepPhotoCount(0);
         lastDurationRef.current = 0;
       }
     },
-    [stopCamera, resetRecording]
+    [stopCamera, resetRecording, clearPhotos]
   );
 
   const handleRequestPermission = async () => {
     const granted = await requestPermission();
     if (granted) {
-      setModalState("ready");
+      setModalState("mode-select");
     }
   };
 
+  const handleSelectMode = (mode: CaptureMode) => {
+    setCaptureMode(mode);
+    setModalState("ready");
+  };
+
   const handleStartRecording = async () => {
-    // Reset quality tracking when recording starts (moved from useEffect to avoid setState in effect)
+    // Reset quality tracking
     setQualitySeconds(0);
     lastDurationRef.current = 0;
+    setGuidedStepIndex(0);
+    setGuidedStepPhotoCount(0);
+    clearPhotos();
     // Request motion permission for iOS
     await requestMotionPermission();
-    startRecording();
-    setModalState("recording");
+
+    if (captureMode === "guided") {
+      // Guided mode: start with photo capture phase (no video recording yet)
+      setGuidedPhase('photos');
+      setModalState("recording");
+    } else {
+      // Free mode: start video recording immediately
+      startRecording();
+      setModalState("recording");
+    }
   };
+
+  // Guided mode: capture photo at current step, returns true if successful
+  const handleGuidedCapture = useCallback(async (): Promise<boolean> => {
+    if (!stream) return false;
+    const step = GUIDED_CAPTURE_STEPS[guidedStepIndex];
+    const ok = await capturePhoto(stream, step.label);
+    if (ok) {
+      setGuidedStepPhotoCount((prev) => prev + 1);
+    }
+    return ok;
+  }, [stream, guidedStepIndex, capturePhoto]);
+
+  // Guided mode: advance to next step
+  const handleGuidedNextStep = useCallback(() => {
+    setGuidedStepIndex((prev) => prev + 1);
+    setGuidedStepPhotoCount(0);
+  }, []);
+
+  // Guided mode: all photos done, transition to video recording phase
+  const handleGuidedFinish = useCallback(() => {
+    setGuidedPhase('video');
+    startRecording();
+  }, [startRecording]);
 
   const handleStopRecording = () => {
     stopRecording();
@@ -309,13 +371,17 @@ export function VideoRecorderModal({
 
   const handleCancel = () => {
     if (modalState === "preview" || modalState === "policy-step") {
-      // Go back to ready state
+      // Go back to mode select state
       resetRecording();
+      clearPhotos();
       setProcessedFile(null);
       setWasCompressed(false);
       setQualitySeconds(0);
+      setGuidedPhase('photos');
+      setGuidedStepIndex(0);
+      setGuidedStepPhotoCount(0);
       lastDurationRef.current = 0;
-      setModalState("ready");
+      setModalState("mode-select");
     } else {
       // Close modal
       handleOpenChange(false);
@@ -359,6 +425,13 @@ export function VideoRecorderModal({
     try {
       const formData = new FormData();
       formData.append("mediaFiles", processedFile);
+
+      // Append guided mode photos as supplementary images
+      if (captureMode === "guided" && capturedPhotos.length > 0) {
+        for (const photo of capturedPhotos) {
+          formData.append("supplementaryPhotos", photo.file);
+        }
+      }
 
       // Add user's country for localized pricing
       const userCountry = getCountryFromTimezone();
@@ -456,6 +529,13 @@ export function VideoRecorderModal({
       const formData = new FormData();
       formData.append("mediaFiles", processedFile);
 
+      // Append guided mode photos as supplementary images
+      if (captureMode === "guided" && capturedPhotos.length > 0) {
+        for (const photo of capturedPhotos) {
+          formData.append("supplementaryPhotos", photo.file);
+        }
+      }
+
       // Add policy - either new file or existing file ID
       if (policySubmission.type === 'file') {
         formData.append("policyFile", policySubmission.file);
@@ -522,7 +602,10 @@ export function VideoRecorderModal({
   const getModalTitle = () => {
     if (modalState === "permission-prompt") return "Camera Access";
     if (modalState === "permission-denied") return "Camera Access Denied";
-    if (modalState === "ready" || modalState === "recording") return "Record Video";
+    if (modalState === "mode-select") return "Choose Capture Mode";
+    if (modalState === "ready") return "Record Video";
+    if (modalState === "recording" && captureMode === "guided" && guidedPhase === 'photos') return "Capture Photos";
+    if (modalState === "recording") return "Record Video";
     if (modalState === "processing") return "Processing...";
     if (modalState === "compressing") return "Processing Video";
     if (modalState === "preview") return "Preview Recording";
@@ -593,6 +676,38 @@ export function VideoRecorderModal({
             </div>
           )}
 
+          {/* Mode Select */}
+          {modalState === "mode-select" && (
+            <div className="flex flex-col items-center justify-center h-full gap-6 text-center">
+              <div className="space-y-2">
+                <h3 className="text-lg font-semibold">How would you like to capture?</h3>
+                <p className="text-sm text-muted-foreground max-w-sm">
+                  Choose a capture mode for documenting the vehicle damage.
+                </p>
+              </div>
+              <div className="flex flex-col gap-3 w-full max-w-sm">
+                <button
+                  onClick={() => handleSelectMode("guided")}
+                  className="flex flex-col gap-1 p-4 rounded-xl border-2 border-border hover:border-primary text-left transition-colors"
+                >
+                  <span className="text-sm font-semibold text-foreground">Guided Mode</span>
+                  <span className="text-xs text-muted-foreground">
+                    Step-by-step capture with photos and video. Best for thorough documentation.
+                  </span>
+                </button>
+                <button
+                  onClick={() => handleSelectMode("free")}
+                  className="flex flex-col gap-1 p-4 rounded-xl border-2 border-border hover:border-primary text-left transition-colors"
+                >
+                  <span className="text-sm font-semibold text-foreground">Free Mode</span>
+                  <span className="text-xs text-muted-foreground">
+                    Record freely. Best for quick assessments.
+                  </span>
+                </button>
+              </div>
+            </div>
+          )}
+
           {/* Ready / Recording */}
           {(modalState === "ready" || modalState === "recording") && (
             <div className="flex flex-col h-full gap-4">
@@ -606,7 +721,7 @@ export function VideoRecorderModal({
                   className="w-full h-full object-cover"
                 />
 
-                {/* Recording indicator */}
+                {/* Recording indicator — shown during actual video recording */}
                 {isRecording && (
                   <div className="absolute top-4 left-4 flex items-center gap-2 bg-black/60 px-3 py-1.5 rounded-full z-20">
                     <div className="w-3 h-3 rounded-full bg-destructive animate-pulse" />
@@ -616,17 +731,44 @@ export function VideoRecorderModal({
 
                 {/* Speed alert overlay */}
                 <SpeedAlert isMovingTooFast={isMovingTooFast} isRecording={isRecording} />
+
+                {/* Guided capture overlay — photo phase only */}
+                {captureMode === "guided" && guidedPhase === 'photos' && modalState === "recording" && (
+                  <GuidedCaptureOverlay
+                    isActive={true}
+                    currentStepIndex={guidedStepIndex}
+                    isCapturing={isPhotoCaptureInProgress}
+                    onCapture={handleGuidedCapture}
+                    onAutoAdvance={handleGuidedNextStep}
+                    onFinish={handleGuidedFinish}
+                    lastThumbnailUrl={capturedPhotos.length > 0 ? capturedPhotos[capturedPhotos.length - 1].thumbnailUrl : undefined}
+                    stepPhotoCount={guidedStepPhotoCount}
+                  />
+                )}
+
+                {/* Guided video phase instruction overlay */}
+                {captureMode === "guided" && guidedPhase === 'video' && isRecording && (
+                  <div className="absolute top-14 left-1/2 -translate-x-1/2 z-10">
+                    <div className="bg-black/70 backdrop-blur-sm rounded-lg px-4 py-2">
+                      <p className="text-white text-sm font-medium text-center">
+                        Record a walkthrough video of the damage
+                      </p>
+                    </div>
+                  </div>
+                )}
               </div>
 
-              {/* Controls */}
-              <RecordingControls
-                isRecording={isRecording}
-                duration={duration}
-                maxDuration={MAX_DURATION_SECONDS}
-                onStart={handleStartRecording}
-                onStop={handleStopRecording}
-                onCancel={handleCancel}
-              />
+              {/* Controls — shown for free mode, guided video phase, or when not yet recording */}
+              {(captureMode === "free" || !isRecording || (captureMode === "guided" && guidedPhase === 'video')) && !(captureMode === "guided" && guidedPhase === 'photos' && modalState === "recording") && (
+                <RecordingControls
+                  isRecording={isRecording}
+                  duration={duration}
+                  maxDuration={MAX_DURATION_SECONDS}
+                  onStart={handleStartRecording}
+                  onStop={handleStopRecording}
+                  onCancel={handleCancel}
+                />
+              )}
             </div>
           )}
 

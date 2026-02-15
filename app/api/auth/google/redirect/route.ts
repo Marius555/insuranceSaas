@@ -12,8 +12,19 @@ export async function GET(request: NextRequest) {
     const protocol = request.headers.get('x-forwarded-proto') || 'http';
     const appUrl = host ? `${protocol}://${host}` : (process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000');
 
-    const successUrl = `${appUrl}/api/auth/google/callback`;
-    const failureUrl = `${appUrl}/?error=oauth_failed`;
+    // Check if this is a popup-mode request and forward theme
+    const mode = request.nextUrl.searchParams.get('mode');
+    const theme = request.nextUrl.searchParams.get('theme');
+
+    const callbackParams = new URLSearchParams();
+    if (mode === 'popup') callbackParams.set('mode', 'popup');
+    if (theme) callbackParams.set('theme', theme);
+    const callbackQuery = callbackParams.toString() ? `?${callbackParams}` : '';
+
+    const successUrl = `${appUrl}/api/auth/google/callback${callbackQuery}`;
+    const failureUrl = mode === 'popup'
+      ? `${appUrl}/api/auth/google/callback${callbackQuery}&error=oauth_failed`
+      : `${appUrl}/?error=oauth_failed`;
 
     // Create OAuth2 session with Google
     // Note: The appUrl must be registered in Appwrite Console under OAuth2 settings

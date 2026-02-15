@@ -14,9 +14,27 @@ export async function GET(request: NextRequest) {
     const userId = searchParams.get('userId');
     const secret = searchParams.get('secret');
 
+    const mode = searchParams.get('mode');
+    const theme = searchParams.get('theme');
+    const darkClass = theme === 'dark' ? 'dark' : '';
+    const popupStyle = `<style>.dark body{background:#0a0a0b;color:#f5f5f5}body{font-family:system-ui,sans-serif;display:flex;align-items:center;justify-content:center;height:100vh;margin:0}</style>`;
+
     // Validate OAuth callback parameters
     if (!userId || !secret) {
       console.error('OAuth callback missing userId or secret');
+      if (mode === 'popup') {
+        return new NextResponse(
+          `<!DOCTYPE html><html class="${darkClass}"><head>${popupStyle}</head><body>
+          <script>
+            if (window.opener) {
+              window.opener.postMessage({ type: 'oauth-error', error: 'invalid_callback' }, window.location.origin);
+              window.close();
+            } else { window.location.href = '/?error=invalid_callback'; }
+          </script>
+          </body></html>`,
+          { status: 200, headers: { 'Content-Type': 'text/html' } }
+        );
+      }
       return NextResponse.redirect(
         new URL('/?error=invalid_callback', redirectUrl)
       );
@@ -62,6 +80,29 @@ export async function GET(request: NextRequest) {
       expires: timeToExpire,
     });
 
+    // Check if this is a popup-mode OAuth flow
+    if (mode === 'popup') {
+      const error = searchParams.get('error');
+      const payload = error
+        ? { type: 'oauth-error', error }
+        : { type: 'oauth-success', userId, name: user.name, email: user.email };
+
+      return new NextResponse(
+        `<!DOCTYPE html><html class="${darkClass}"><head>${popupStyle}</head><body>
+        <p>Signing in... This window will close automatically.</p>
+        <script>
+          if (window.opener) {
+            window.opener.postMessage(${JSON.stringify(payload)}, window.location.origin);
+            window.close();
+          } else {
+            window.location.href = '/';
+          }
+        </script>
+        </body></html>`,
+        { status: 200, headers: { 'Content-Type': 'text/html' } }
+      );
+    }
+
     // Check for pending plan selection (set from /pricing before OAuth)
     const pendingPlan = cookieStore.get("pending_plan")?.value;
 
@@ -95,6 +136,26 @@ export async function GET(request: NextRequest) {
 
   } catch (error) {
     console.error('OAuth callback error:', error);
+
+    // Check if popup mode from the URL search params
+    const popupMode = request.nextUrl.searchParams.get('mode') === 'popup';
+
+    if (popupMode) {
+      const catchTheme = request.nextUrl.searchParams.get('theme');
+      const catchDarkClass = catchTheme === 'dark' ? 'dark' : '';
+      const catchStyle = `<style>.dark body{background:#0a0a0b;color:#f5f5f5}body{font-family:system-ui,sans-serif;display:flex;align-items:center;justify-content:center;height:100vh;margin:0}</style>`;
+      return new NextResponse(
+        `<!DOCTYPE html><html class="${catchDarkClass}"><head>${catchStyle}</head><body>
+        <script>
+          if (window.opener) {
+            window.opener.postMessage({ type: 'oauth-error', error: 'oauth_failed' }, window.location.origin);
+            window.close();
+          } else { window.location.href = '/?error=oauth_failed'; }
+        </script>
+        </body></html>`,
+        { status: 200, headers: { 'Content-Type': 'text/html' } }
+      );
+    }
 
     // Redirect to landing page with error
     const errorUrl = new URL('/', redirectUrl);

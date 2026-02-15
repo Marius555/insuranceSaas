@@ -583,6 +583,10 @@ export async function createReportFromAnalysis(
           severity: normalizedSeverity,
           description: part.description,
           estimated_repair_cost: part.estimatedRepairCost || null,
+          repair_or_replace: part.repairOrReplace || null,
+          repair_or_replace_reason: part.repairOrReplaceReason
+            ? toValidString(part.repairOrReplaceReason, 500, 'repair_or_replace_reason')
+            : null,
           sort_order: index,
           // Fraud detection fields
           damage_age: part.damageAge || null,

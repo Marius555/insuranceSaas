@@ -26,6 +26,7 @@ import { revalidatePath, revalidateTag } from 'next/cache';
 export async function submitReportAction(formData: FormData) {
   // Extract files and data from FormData
   const mediaFiles = formData.getAll('mediaFiles') as File[];
+  const supplementaryPhotos = formData.getAll('supplementaryPhotos') as File[];
   const policyFile = formData.get('policyFile') as File | null;
   const existingPolicyFileId = formData.get('existingPolicyFileId') as string | null;
   const insuranceCompanyId = formData.get('insuranceCompanyId') as string | null;
@@ -80,6 +81,7 @@ export async function submitReportAction(formData: FormData) {
 
   console.log(`📋 Submitting report for user: ${userId}`);
   console.log(`   Media files: ${mediaFiles.length}`);
+  console.log(`   Supplementary photos: ${supplementaryPhotos.length}`);
   console.log(`   Policy file: ${policyFile ? 'Yes (new upload)' : existingPolicyFileId ? 'Yes (existing)' : 'No'}`);
   console.log(`   Insurance company: ${insuranceCompanyId || 'None'}`);
   console.log(`   User country: ${userCountry || 'Not detected'}`);
@@ -92,6 +94,7 @@ export async function submitReportAction(formData: FormData) {
     userId,
     insuranceCompanyId: insuranceCompanyId || undefined,
     mediaFiles,
+    supplementaryPhotos: supplementaryPhotos.length > 0 ? supplementaryPhotos : undefined,
     policyFile: policyFile || undefined,
     existingPolicyFileId: existingPolicyFileId || undefined,
     useEnhancedAnalysis: hasPolicy,

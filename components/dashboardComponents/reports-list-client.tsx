@@ -22,6 +22,7 @@ import {
 import { SearchAreaIcon, ArrangeIcon } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { ReportsTable } from "@/components/dashboardComponents/reports-table";
+import { ClaimsHistorySummary } from "@/components/dashboardComponents/claims-history-summary";
 import type { ReportDocument } from "@/lib/types/appwrite";
 
 const ITEMS_PER_PAGE = 20;
@@ -113,6 +114,9 @@ export function ReportsListClient({ reports }: ReportsListClientProps) {
 
   return (
     <div className="flex flex-col gap-4">
+      {/* Claims History Summary */}
+      <ClaimsHistorySummary reports={reports} />
+
       {/* Search and Sort Controls */}
       <div className="flex items-center gap-2">
         <div className="relative flex-1">

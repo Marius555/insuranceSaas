@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono, Inter } from "next/font/google";
 import "./globals.css";
 import { ThemeProvider } from "@/components/theme-provider";
@@ -19,6 +19,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
+
   title: {
     default: "VehicleClaim AI - AI-Powered Vehicle Damage Assessment",
     template: "%s | VehicleClaim AI",
@@ -50,6 +51,11 @@ export const metadata: Metadata = {
     description: "Process insurance claims in minutes with AI video analysis.",
   },
 };
+export const viewport: Viewport = {
+  themeColor: '#ffffff',
+  colorScheme: 'light',
+  // You can also define width/initialScale here if needed
+}
 
 export default function RootLayout({
   children,
