@@ -90,8 +90,8 @@ export function NavUser({ user }: NavUserProps = {}) {
             </DropdownMenuLabel>
             <DropdownMenuSeparator />
             <DropdownMenuGroup>
-              <DropdownMenuItem>
-                <HugeiconsIcon icon={SparklesIcon} />
+              <DropdownMenuItem className="text-primary focus:text-primary focus:bg-primary/10">
+                <HugeiconsIcon icon={SparklesIcon} className="text-primary" style={{ color: 'var(--primary)' }} />
                 Upgrade to Pro
               </DropdownMenuItem>
             </DropdownMenuGroup>

@@ -12,21 +12,22 @@ const Toaster = ({ ...props }: ToasterProps) => {
     <Sonner
       theme={theme as ToasterProps["theme"]}
       className="toaster group"
+      duration={8000}
       icons={{
         success: (
-          <HugeiconsIcon icon={CheckmarkCircle02Icon} strokeWidth={2} className="size-4" />
+          <HugeiconsIcon icon={CheckmarkCircle02Icon} strokeWidth={2} className="size-4 text-primary" />
         ),
         info: (
-          <HugeiconsIcon icon={InformationCircleIcon} strokeWidth={2} className="size-4" />
+          <HugeiconsIcon icon={InformationCircleIcon} strokeWidth={2} className="size-4 text-primary" />
         ),
         warning: (
-          <HugeiconsIcon icon={Alert02Icon} strokeWidth={2} className="size-4" />
+          <HugeiconsIcon icon={Alert02Icon} strokeWidth={2} className="size-4 text-primary" />
         ),
         error: (
-          <HugeiconsIcon icon={MultiplicationSignCircleIcon} strokeWidth={2} className="size-4" />
+          <HugeiconsIcon icon={MultiplicationSignCircleIcon} strokeWidth={2} className="size-4 text-primary" />
         ),
         loading: (
-          <HugeiconsIcon icon={Loading03Icon} strokeWidth={2} className="size-4 animate-spin" />
+          <HugeiconsIcon icon={Loading03Icon} strokeWidth={2} className="size-4 text-primary animate-spin" />
         ),
       }}
       style={
@@ -40,6 +41,8 @@ const Toaster = ({ ...props }: ToasterProps) => {
       toastOptions={{
         classNames: {
           toast: "cn-toast",
+          title: "font-semibold text-sm",
+          description: "text-muted-foreground",
         },
       }}
       {...props}

@@ -18,9 +18,10 @@ interface OnboardingModalProps {
   email: string;
   name: string;
   flowType?: OnboardingFlow | null;
+  insuranceEnabled?: boolean;
 }
 
-export function OnboardingModal({ userId, email, name, flowType }: OnboardingModalProps) {
+export function OnboardingModal({ userId, email, name, flowType, insuranceEnabled }: OnboardingModalProps) {
   const router = useRouter();
   const [step, setStep] = useState<'select-type' | 'insurance-details' | 'company-registration' | 'registration-success'>('select-type');
   const [userType, setUserType] = useState<'user' | 'insurance_adjuster' | null>(null);
@@ -143,7 +144,7 @@ export function OnboardingModal({ userId, email, name, flowType }: OnboardingMod
 
   return (
     <Dialog open={true} modal>
-      <DialogContent className="sm:max-w-md" onPointerDownOutside={(e) => e.preventDefault()}>
+      <DialogContent className="sm:max-w-md max-h-[90dvh] overflow-y-auto" onPointerDownOutside={(e) => e.preventDefault()}>
         {step === 'select-type' && (
           <>
             <DialogHeader>
@@ -163,7 +164,7 @@ export function OnboardingModal({ userId, email, name, flowType }: OnboardingMod
                 {(flowType === 'user' || !flowType) && (
                   <Button
                     variant="outline"
-                    className="h-auto py-4 px-4 justify-start focus:ring-2 focus:ring-primary focus:ring-offset-2"
+                    className="h-auto py-4 px-4 justify-start whitespace-normal focus:ring-2 focus:ring-primary focus:ring-offset-2"
                     onClick={() => handleUserTypeSelect('user')}
                     disabled={isSubmitting}
                   >
@@ -182,10 +183,10 @@ export function OnboardingModal({ userId, email, name, flowType }: OnboardingMod
                 )}
 
                 {/* Insurance Employee Option - shown for 'insurance' flow or no flow */}
-                {(flowType === 'insurance' || !flowType) && (
+                {insuranceEnabled && (flowType === 'insurance' || !flowType) && (
                   <Button
                     variant="outline"
-                    className="h-auto py-4 px-4 justify-start focus:ring-2 focus:ring-primary focus:ring-offset-2"
+                    className="h-auto py-4 px-4 justify-start whitespace-normal focus:ring-2 focus:ring-primary focus:ring-offset-2"
                     onClick={() => handleUserTypeSelect('insurance_adjuster')}
                     disabled={isSubmitting}
                   >
@@ -204,10 +205,10 @@ export function OnboardingModal({ userId, email, name, flowType }: OnboardingMod
                 )}
 
                 {/* Register Company Option - shown for 'insurance' flow or no flow */}
-                {(flowType === 'insurance' || !flowType) && (
+                {insuranceEnabled && (flowType === 'insurance' || !flowType) && (
                   <Button
                     variant="outline"
-                    className="h-auto py-4 px-4 justify-start focus:ring-2 focus:ring-primary focus:ring-offset-2"
+                    className="h-auto py-4 px-4 justify-start whitespace-normal focus:ring-2 focus:ring-primary focus:ring-offset-2"
                     onClick={() => {
                       setUserType(null);
                       setStep('company-registration');

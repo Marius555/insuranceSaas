@@ -4,7 +4,7 @@ import { retryWithFallback } from "../utils/retryWithFallback";
 import { recordTokenUsage } from "../rateLimit/storage";
 import { fileToBase64 } from "../utils/fileToBase64";
 import { sanitizeGeminiError, isRateLimitError } from "../utils/sanitizeError";
-import { GEMINI_MODELS, GEMINI_SAFETY_SETTINGS } from "../constants";
+import { GEMINI_MODELS, GEMINI_SAFETY_SETTINGS, RELAXED_CONSISTENCY_CONFIG, DAMAGE_ANALYSIS_SYSTEM_INSTRUCTION } from "../constants";
 import type {
   VideoAnalysisInput,
   GeminiResult,
@@ -77,11 +77,9 @@ export async function analyzeVideo(
           },
         ],
         config: {
-          temperature: 0.0,        // Override input - maximum determinism
-          topP: 0.1,               // Narrow sampling
-          topK: 1,                 // Single best token
-          seed: 12345,             // Fixed seed for reproducibility
-          maxOutputTokens: 2048,
+          ...RELAXED_CONSISTENCY_CONFIG,
+          systemInstruction: DAMAGE_ANALYSIS_SYSTEM_INSTRUCTION,
+          maxOutputTokens: 8192,
           ...(input.responseFormat === 'json' && {
             responseMIMEType: "application/json",
           }),
@@ -99,6 +97,14 @@ export async function analyzeVideo(
           .replace(/^```json\s*\n?/i, '')
           .replace(/\n?```\s*$/i, '')
           .trim();
+
+        // Detect truncated responses (before attempting JSON.parse)
+        if (
+          response.finishReason === 'MAX_TOKENS' ||
+          (cleanedText.startsWith('{') && !cleanedText.endsWith('}'))
+        ) {
+          throw new Error('Analysis response was truncated due to output token limit');
+        }
 
         // Check for no-vehicle indicators BEFORE parsing JSON
         // Gemini may return text instead of JSON when it can't detect a vehicle
@@ -121,8 +127,8 @@ export async function analyzeVideo(
           lowerText.includes(indicator)
         );
 
-        if (isNotJsonResponse || hasNoVehicleIndicator) {
-          // Return user-friendly error for no vehicle detected
+        if (isNotJsonResponse && hasNoVehicleIndicator) {
+          // Gemini returned plain text (not JSON) indicating no vehicle
           throw new Error('NO_VEHICLE_DETECTED');
         }
 
@@ -130,17 +136,15 @@ export async function analyzeVideo(
           analysis = JSON.parse(cleanedText);
         } catch (parseError) {
           console.error('Failed to parse JSON response:', cleanedText.substring(0, 200));
-          // Check if the text content suggests no vehicle was found
-          if (hasNoVehicleIndicator) {
-            throw new Error('NO_VEHICLE_DETECTED');
-          }
           throw new Error(`Invalid JSON response from Gemini: ${parseError instanceof Error ? parseError.message : 'Unknown error'}`);
         }
 
-        // Validate the parsed analysis has required damage data
+        // Validate using the structured vehiclePresent flag
         const parsedAnalysis = analysis as AutoDamageAnalysis;
+        if (parsedAnalysis.vehiclePresent === false) {
+          throw new Error('NO_VEHICLE_DETECTED');
+        }
         if (!parsedAnalysis.damagedParts || parsedAnalysis.damagedParts.length === 0) {
-          // No damage parts found - could be no visible damage or no vehicle
           throw new Error('NO_DAMAGE_DETECTED');
         }
       } else {
@@ -322,7 +326,8 @@ Based on the visible external damage, infer possible internal/mechanical damage 
 - Only infer damages mechanically plausible given the OBSERVED external damage
 - Assign likelihood: "high" (very likely), "medium" (plausible), "low" (possible but uncertain)
 - Keep the list focused (3-8 items typically)
-- These are NOT included in any cost estimates
+- Provide an estimatedRepairCost range for each inferred damage (e.g., "$200 - $400")
+- These are NOT included in estimatedTotalRepairCost by default
 
 ### SURFACE CONTAMINATION CHECK
 Identify any substances covering or near the damage:
@@ -353,8 +358,12 @@ For each damaged part, provide:
 - Consider parts cost + labor for repair or replacement
 - Use realistic market pricing for auto body work
 
+VEHICLE PRESENCE:
+Set "vehiclePresent": true if a vehicle is visible in the video. Set false ONLY if no vehicle is present at all. Do NOT set false just because damage is unclear or the VIN cannot be read.
+
 Return a JSON object with the following structure:
 {
+  "vehiclePresent": true,
   "damagedParts": [
     {
       "part": "front bumper",
@@ -374,7 +383,8 @@ Return a JSON object with the following structure:
       "component": "radiator",
       "likelihood": "high",
       "description": "Front-end impact likely damaged the radiator or mounting brackets",
-      "basedOn": "Front bumper and grille area damage"
+      "basedOn": "Front bumper and grille area damage",
+      "estimatedRepairCost": "$200 - $400"
     }
   ],
   "overallSeverity": "moderate",
@@ -409,6 +419,9 @@ Return a JSON object with the following structure:
     "notes": "No rust detected in damage areas"
   }
 }
+
+DAMAGE DETECTION RULE:
+Include ALL visible damage no matter how minor. Do NOT return empty damagedParts unless you are certain the vehicle has zero damage. Include scuffs, scratches, dents, chips, and any impact-related imperfection even at low confidence. Low certainty about damage extent is not a reason to omit — include it with an honest description.
 
 Categories:
 - severity: "minor" | "moderate" | "severe" | "total_loss"

@@ -16,6 +16,7 @@ export async function proxy(request: NextRequest) {
 
   let authenticated = false;
   let userId: string | null = null;
+  let payload: { userId?: string; onboarding_completed?: boolean } | null = null;
 
   // Attempt to verify the localSession JWT
   const localSession = request.cookies.get('localSession')?.value;
@@ -24,7 +25,6 @@ export async function proxy(request: NextRequest) {
     const secret = new TextEncoder().encode(process.env.ENCRYPTION_KEY);
 
     // Try URL-decoded first, then raw value (matches lib/data/cached-queries.ts:32-42)
-    let payload: { userId?: string } | null = null;
     try {
       const decoded = decodeURIComponent(localSession);
       const result = await jwtVerify(decoded, secret, { algorithms: ['HS256'] });
@@ -42,6 +42,14 @@ export async function proxy(request: NextRequest) {
       authenticated = true;
       userId = payload.userId;
     }
+  }
+
+  // Redirect authenticated + onboarded users away from the landing page
+  if (pathname === '/' && authenticated && userId && payload?.onboarding_completed === true) {
+    const dashboardUrl = new URL(`/auth/dashboard/${userId}`, request.url);
+    const response = NextResponse.redirect(dashboardUrl);
+    response.headers.set('X-Request-Id', requestId);
+    return response;
   }
 
   // Protect /auth/* routes

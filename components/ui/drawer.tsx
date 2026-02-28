@@ -88,7 +88,7 @@ function DrawerContent({
         {children}
         {showCloseButton && (
           <DrawerPrimitive.Close asChild>
-            <Button variant="ghost" className="absolute top-4 right-4" size="icon-sm">
+            <Button variant="ghost" className="absolute top-8.5 right-5" size="icon-sm">
               <HugeiconsIcon icon={Cancel01Icon} strokeWidth={2} />
               <span className="sr-only">Close</span>
             </Button>

@@ -23,9 +23,10 @@ interface SessionUser {
 
 interface HeroWithUploadProps {
   session: SessionUser | null;
+  insuranceEnabled: boolean;
 }
 
-export function HeroWithUpload({ session }: HeroWithUploadProps) {
+export function HeroWithUpload({ session, insuranceEnabled }: HeroWithUploadProps) {
   const router = useRouter();
   const [showSignInModal, setShowSignInModal] = useState(false);
   const [flowType, setFlowType] = useState<OnboardingFlow | null>(null);
@@ -116,14 +117,16 @@ export function HeroWithUpload({ session }: HeroWithUploadProps) {
             >
               <HugeiconsIcon icon={UserCircleIcon} strokeWidth={2.5} /> Check Your Car
             </Button>
-            <Button
-              onClick={handleInsuranceClick}
-              size="lg"
-              className="text-lg px-8 py-6 "
-              variant="outline"
-            >
-              <HugeiconsIcon icon={Building06Icon} strokeWidth={2.5} /> For Insurance Companies
-            </Button>
+            {insuranceEnabled && (
+              <Button
+                onClick={handleInsuranceClick}
+                size="lg"
+                className="text-lg px-8 py-6 "
+                variant="outline"
+              >
+                <HugeiconsIcon icon={Building06Icon} strokeWidth={2.5} /> For Insurance Companies
+              </Button>
+            )}
           </div>
 
           {/* Trust Indicators */}
@@ -150,6 +153,7 @@ export function HeroWithUpload({ session }: HeroWithUploadProps) {
         isOpen={showSignInModal}
         onClose={() => { setShowSignInModal(false); setFlowType(null); }}
         flowType={flowType}
+        insuranceEnabled={insuranceEnabled}
       />
     </>
   );

@@ -10,6 +10,7 @@ interface UseVideoRecorderOptions {
 
 interface UseVideoRecorderReturn {
   isRecording: boolean;
+  isPaused: boolean;
   duration: number;
   recordedBlob: Blob | null;
   recordedFile: File | null;
@@ -19,6 +20,8 @@ interface UseVideoRecorderReturn {
   isSupported: boolean;
   startRecording: () => void;
   stopRecording: () => void;
+  pauseRecording: () => void;
+  resumeRecording: () => void;
   resetRecording: () => void;
 }
 
@@ -71,6 +74,7 @@ export function useVideoRecorder(
   const { maxDurationSeconds = 20, stream, onMaxDurationReached } = options;
 
   const [isRecording, setIsRecording] = useState(false);
+  const [isPaused, setIsPaused] = useState(false);
   const [duration, setDuration] = useState(0);
   const [recordedBlob, setRecordedBlob] = useState<Blob | null>(null);
   const [recordedFile, setRecordedFile] = useState<File | null>(null);
@@ -99,6 +103,7 @@ export function useVideoRecorder(
   const resetRecording = useCallback(() => {
     cleanup();
     setIsRecording(false);
+    setIsPaused(false);
     setDuration(0);
     setRecordedBlob(null);
     setRecordedFile(null);
@@ -120,7 +125,36 @@ export function useVideoRecorder(
       timerRef.current = null;
     }
     setIsRecording(false);
+    setIsPaused(false);
   }, []);
+
+  const pauseRecording = useCallback(() => {
+    if (mediaRecorderRef.current && mediaRecorderRef.current.state === "recording") {
+      mediaRecorderRef.current.pause();
+      setIsPaused(true);
+      if (timerRef.current) {
+        clearInterval(timerRef.current);
+        timerRef.current = null;
+      }
+    }
+  }, []);
+
+  const resumeRecording = useCallback(() => {
+    if (mediaRecorderRef.current && mediaRecorderRef.current.state === "paused") {
+      mediaRecorderRef.current.resume();
+      setIsPaused(false);
+      // Resume timer from current duration
+      startTimeRef.current = Date.now() - (duration * 1000);
+      timerRef.current = setInterval(() => {
+        const elapsed = Math.floor((Date.now() - startTimeRef.current) / 1000);
+        setDuration(elapsed);
+        if (maxDurationSeconds && elapsed >= maxDurationSeconds) {
+          stopRecording();
+          onMaxDurationReached?.();
+        }
+      }, 100);
+    }
+  }, [duration, maxDurationSeconds, stopRecording, onMaxDurationReached]);
 
   const startRecording = useCallback(() => {
     if (!stream) {
@@ -220,6 +254,7 @@ export function useVideoRecorder(
 
   return {
     isRecording,
+    isPaused,
     duration,
     recordedBlob,
     recordedFile,
@@ -229,6 +264,8 @@ export function useVideoRecorder(
     isSupported,
     startRecording,
     stopRecording,
+    pauseRecording,
+    resumeRecording,
     resetRecording,
   };
 }

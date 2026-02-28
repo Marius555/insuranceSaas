@@ -18,6 +18,10 @@ export const DATABASE_ID = process.env.DATABASE_ID!;
  */
 export const STORAGE_BUCKET_ID = process.env.STORAGE_BUKET_ID!; // Note: preserving original typo in env var name
 
+/** Feature flag: whether insurance-company-facing content is shown on the landing page */
+export const INSURANCE_COMPANIES_ALLOWED =
+  process.env.INSURANCE_COMPANIES_ALLOWED === 'true';
+
 /**
  * Collection IDs for all database collections
  * These are automatically populated by the schema submission script

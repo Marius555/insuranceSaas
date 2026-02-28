@@ -243,6 +243,74 @@ function normalizeRepairComplexity(
 }
 
 /**
+ * Normalize damage_age to match Appwrite enum
+ * Allowed values: 'fresh' | 'days_old' | 'weeks_old' | 'months_old' | 'unknown'
+ * Returns null for unrecognized values (field is nullable in the DB).
+ */
+function normalizeDamageAge(
+  age: string | undefined | null
+): 'fresh' | 'days_old' | 'weeks_old' | 'months_old' | 'unknown' | null {
+  if (!age) return null;
+
+  const normalized = age.toLowerCase().trim().replace(/\s+/g, '_');
+
+  const ageMap: Record<string, 'fresh' | 'days_old' | 'weeks_old' | 'months_old' | 'unknown'> = {
+    // Direct matches
+    'fresh': 'fresh',
+    'days_old': 'days_old',
+    'weeks_old': 'weeks_old',
+    'months_old': 'months_old',
+    'unknown': 'unknown',
+
+    // Synonyms for fresh
+    'recent': 'fresh',
+    'new': 'fresh',
+    'very_fresh': 'fresh',
+
+    // Synonyms for days_old
+    'day_old': 'days_old',
+    'a_few_days': 'days_old',
+
+    // Synonyms for weeks_old
+    'week_old': 'weeks_old',
+    'a_few_weeks': 'weeks_old',
+
+    // Synonyms for months_old
+    'month_old': 'months_old',
+    'old': 'months_old',
+    'aged': 'months_old',
+    'years_old': 'months_old',
+    'pre-existing': 'months_old',
+    'pre_existing': 'months_old',
+    'pre_existing_modifications_and_wear': 'months_old',
+  };
+
+  const mapped = ageMap[normalized];
+  if (mapped) return mapped;
+
+  // Partial keyword matching
+  if (normalized.includes('fresh') || normalized.includes('recent') || normalized.includes('new')) {
+    console.warn(`⚠️ Unmapped damage_age "${age}", mapping to "fresh"`);
+    return 'fresh';
+  }
+  if (normalized.includes('day')) {
+    console.warn(`⚠️ Unmapped damage_age "${age}", mapping to "days_old"`);
+    return 'days_old';
+  }
+  if (normalized.includes('week')) {
+    console.warn(`⚠️ Unmapped damage_age "${age}", mapping to "weeks_old"`);
+    return 'weeks_old';
+  }
+  if (normalized.includes('month') || normalized.includes('old') || normalized.includes('aged')) {
+    console.warn(`⚠️ Unmapped damage_age "${age}", mapping to "months_old"`);
+    return 'months_old';
+  }
+
+  console.warn(`⚠️ Unknown damage_age value "${age}", defaulting to null`);
+  return null;
+}
+
+/**
  * Ensure value is a valid number for Appwrite float fields
  * Handles strings, NaN, null, undefined, and other edge cases
  */
@@ -589,10 +657,11 @@ export async function createReportFromAnalysis(
             : null,
           sort_order: index,
           // Fraud detection fields
-          damage_age: part.damageAge || null,
+          damage_age: part.damageAge ? normalizeDamageAge(part.damageAge) : null,
           age_indicators: toValidStringArray(part.ageIndicators, 200, 'age_indicators'),
           rust_present: part.rustPresent ?? false,
           pre_existing: part.preExisting ?? false,
+          is_inferred: false,
         },
         getReportRelatedPermissions(userId, teamId)
       );
@@ -617,7 +686,7 @@ export async function createReportFromAnalysis(
           part_name: item.component,
           severity,
           description: item.description,
-          estimated_repair_cost: null,
+          estimated_repair_cost: item.estimatedRepairCost || null,
           sort_order: analysisData.damagedParts.length + index,
           is_inferred: true,
           inferred_likelihood: item.likelihood,
@@ -686,7 +755,7 @@ export async function createReportFromAnalysis(
         claim_id: reportId,
         coverage_types: toValidStringArray(analysisData.policyAnalysis.coverageTypes, 100, 'coverage_types'),
         deductible_types: toValidStringArray(analysisData.policyAnalysis.deductibles.map(d => d.type), 50, 'deductible_types'),
-        deductible_amounts: analysisData.policyAnalysis.deductibles.map(d => d.amount),
+        deductible_amounts: analysisData.policyAnalysis.deductibles.map(d => toValidFloat(d.amount)),
         exclusions: toValidStringArray(analysisData.policyAnalysis.exclusions, 1200, 'exclusions'),
         coverage_limit_collision: toValidFloat(analysisData.policyAnalysis.coverageLimits.collision),
         coverage_limit_comprehensive: toValidFloat(analysisData.policyAnalysis.coverageLimits.comprehensive),
@@ -722,7 +791,9 @@ export async function createReportFromAnalysis(
       {
         claim_id: reportId,
         // Damage age assessment
-        damage_age_estimated: analysisData.damageAgeAssessment?.estimatedAge || null,
+        damage_age_estimated: analysisData.damageAgeAssessment?.estimatedAge
+          ? normalizeDamageAge(analysisData.damageAgeAssessment.estimatedAge)
+          : null,
         damage_age_confidence: analysisData.damageAgeAssessment?.confidenceScore ?? null,
         damage_age_data_json: analysisData.damageAgeAssessment
           ? toValidString(JSON.stringify({

@@ -27,9 +27,15 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Check if user has completed onboarding (needed for JWT flag)
+    const userDoc = await getUserDocument(result.userId);
+
     // Set session cookies (7-day expiry)
     const timeToExpire = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
-    const jwt = await encryptData(result.userId, timeToExpire);
+    const jwt = await encryptData(
+      { userId: result.userId, onboarding_completed: !!(userDoc?.onboarding_completed) },
+      timeToExpire
+    );
 
     const cookieStore = await cookies();
 
@@ -51,8 +57,6 @@ export async function POST(request: NextRequest) {
       expires: timeToExpire,
     });
 
-    // Check if user has completed onboarding
-    const userDoc = await getUserDocument(result.userId);
     const redirect = userDoc ? `/auth/dashboard/${result.userId}` : '/';
 
     return NextResponse.json({

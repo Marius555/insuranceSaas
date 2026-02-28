@@ -58,9 +58,9 @@ export function UserAvatarMenu() {
         sideOffset={4}
       >
         <DropdownMenuGroup>
-          <DropdownMenuItem asChild>
+          <DropdownMenuItem asChild className="text-primary focus:text-primary focus:bg-primary/10">
             <Link href="/pricing">
-              <HugeiconsIcon icon={SparklesIcon} />
+              <HugeiconsIcon icon={SparklesIcon} className="text-primary" style={{ color: 'var(--primary)' }} />
               Upgrade to Pro
             </Link>
           </DropdownMenuItem>

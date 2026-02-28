@@ -18,9 +18,25 @@ export function sanitizeGeminiError(error: unknown): string {
     return 'AI models are currently at capacity. Please wait and try again.';
   }
 
+  // Check for 500 internal server errors (transient)
+  if (isInternalServerError(error)) {
+    return 'AI service encountered a temporary error. Please try again.';
+  }
+
   // Type check for Error instance
   if (error instanceof Error) {
     const message = error.message.toLowerCase();
+
+    // Analysis-specific detection errors
+    if (error.message === 'NO_VEHICLE_DETECTED') {
+      return 'No vehicle detected in the video. Please record a video that clearly shows the damaged vehicle.';
+    }
+    if (error.message === 'NO_DAMAGE_DETECTED') {
+      return 'Unable to identify vehicle damage. Please ensure the damage is clearly visible in the recording.';
+    }
+    if (error.message === 'INVALID_POLICY_DOCUMENT') {
+      return 'The uploaded document does not appear to be a valid auto insurance policy. Please upload your vehicle insurance policy document.';
+    }
 
     // API key errors
     if (message.includes('api_key_invalid') || message.includes('invalid api key')) {
@@ -104,6 +120,31 @@ export function isRateLimitError(error: unknown): boolean {
 }
 
 /**
+ * Checks if an error is a 500 Internal Server Error (transient)
+ * These are server-side issues that typically resolve on retry
+ *
+ * @param error - The error to check
+ * @returns true if error is a 500 internal server error
+ */
+export function isInternalServerError(error: unknown): boolean {
+  if (!error) return false;
+
+  // Check structured error format (ApiError from @google/genai)
+  if (typeof error === 'object' && error !== null) {
+    const err = error as any;
+    const code = err.code || err.error?.code || err.status;
+    if (code === 500 || code === '500') return true;
+    if (err.error?.status === 'INTERNAL') return true;
+  }
+
+  // Check error message
+  const message = error instanceof Error ? error.message : String(error);
+  if (message.includes('"code":500') || message.includes('"status":"INTERNAL"')) return true;
+
+  return false;
+}
+
+/**
  * Checks if an error is retryable (rate limit OR transient parsing errors)
  * Includes JSON truncation errors which often succeed on retry with different model
  *
@@ -113,6 +154,9 @@ export function isRateLimitError(error: unknown): boolean {
 export function isRetryableError(error: unknown): boolean {
   // Rate limit errors are always retryable
   if (isRateLimitError(error)) return true;
+
+  // 500 internal server errors are transient and should retry with fallback
+  if (isInternalServerError(error)) return true;
 
   // Check for JSON parsing/truncation errors (transient, often succeed on retry)
   const message = error instanceof Error ? error.message.toLowerCase() : String(error).toLowerCase();

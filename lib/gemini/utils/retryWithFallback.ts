@@ -39,7 +39,8 @@ import { isRetryableError } from './sanitizeError';
 export async function retryWithFallback<T>(
   apiCall: (client: any, modelName: string) => Promise<T>,
   estimatedTokens: number,
-  attemptedModels: Set<string> = new Set()
+  attemptedModels: Set<string> = new Set(),
+  noVehicleAttempts: number = 0
 ): Promise<
   | { success: true; result: T; modelUsed: string }
   | { success: false; error: unknown; exhaustedModels: string[] }
@@ -74,6 +75,45 @@ export async function retryWithFallback<T>(
       modelUsed: modelName
     };
   } catch (error: unknown) {
+    // INVALID_POLICY_DOCUMENT is a hard domain error — never retry
+    if (error instanceof Error && error.message === 'INVALID_POLICY_DOCUMENT') {
+      console.log(`ℹ️  Model ${modelName} analysis result: INVALID_POLICY_DOCUMENT`);
+      return {
+        success: false,
+        error,
+        exhaustedModels: [...attemptedModels]
+      };
+    }
+
+    // NO_DAMAGE_DETECTED: allow two retries with more capable models (lite models miss damage)
+    if (error instanceof Error && error.message === 'NO_DAMAGE_DETECTED') {
+      if (noVehicleAttempts < 2) {
+        console.log(`⚠️  Model ${modelName} returned NO_DAMAGE_DETECTED — retrying with next model (attempt ${noVehicleAttempts + 1}/2)`);
+        return retryWithFallback(apiCall, estimatedTokens, attemptedModels, noVehicleAttempts + 1);
+      }
+      console.log(`ℹ️  Multiple models agree: NO_DAMAGE_DETECTED`);
+      return {
+        success: false,
+        error,
+        exhaustedModels: [...attemptedModels]
+      };
+    }
+
+    // NO_VEHICLE_DETECTED: allow one retry with a different model in case it was a false positive
+    if (error instanceof Error && error.message === 'NO_VEHICLE_DETECTED') {
+      if (noVehicleAttempts < 1) {
+        console.log(`⚠️  Model ${modelName} returned NO_VEHICLE_DETECTED — retrying with next model (attempt ${noVehicleAttempts + 1}/1)`);
+        return retryWithFallback(apiCall, estimatedTokens, attemptedModels, noVehicleAttempts + 1);
+      }
+      // Two models agree — surface the error
+      console.log(`ℹ️  Two models agree: NO_VEHICLE_DETECTED`);
+      return {
+        success: false,
+        error,
+        exhaustedModels: [...attemptedModels]
+      };
+    }
+
     console.log(`❌ Model ${modelName} failed with error:`, error);
 
     // Check if it's a retryable error (rate limit, 503, or JSON truncation)

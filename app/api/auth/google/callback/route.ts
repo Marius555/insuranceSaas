@@ -2,6 +2,7 @@ import { cookies } from 'next/headers';
 import { NextRequest, NextResponse } from 'next/server';
 import { encryptData } from '@/utils/encrypt';
 import { Client, Account, Users } from 'node-appwrite';
+import { getUserDocument } from '@/appwrite/getUserDocument';
 
 export async function GET(request: NextRequest) {
   // Get the actual origin from the request (works with any registered origin)
@@ -56,9 +57,15 @@ export async function GET(request: NextRequest) {
     // Get user details for JWT cookie
     const user = await users.get(userId);
 
+    // Fetch user doc to include onboarding flag in JWT
+    const userDoc = await getUserDocument(userId).catch(() => null);
+
     // Set session cookies (7-day expiry)
     const timeToExpire = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
-    const jwt = await encryptData(userId, timeToExpire);
+    const jwt = await encryptData(
+      { userId, email: user.email, name: user.name, onboarding_completed: !!(userDoc?.onboarding_completed) },
+      timeToExpire
+    );
 
     const cookieStore = await cookies();
 

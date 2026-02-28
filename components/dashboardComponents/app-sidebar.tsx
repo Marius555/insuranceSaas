@@ -9,6 +9,7 @@ import {
     SolidLine02Icon,
     Settings02Icon,
     Notification01Icon,
+    PresentationBarChart01Icon,
 } from "@hugeicons/core-free-icons"
 
 import * as React from "react"
@@ -47,6 +48,11 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
       icon: FileValidationIcon,
     },
     {
+      title: "Analytics",
+      url: `/auth/dashboard/${userId}/analytics`,
+      icon: PresentationBarChart01Icon,
+    },
+    {
       title: "Notifications",
       url: `/auth/dashboard/${userId}/notifications`,
       icon: Notification01Icon,
@@ -61,7 +67,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   const navSecondary = [
     {
       title: "Support",
-      url: "#",
+      url: "/contact",
       icon: () => <HugeiconsIcon icon={SolidLine02Icon} />,
     },
   ]
@@ -73,20 +79,25 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
           <SidebarMenuItem>
             <SidebarMenuButton
               size="lg"
-              className="cursor-default hover:bg-transparent active:bg-transparent"
+              asChild
             >
-              <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary/15 text-primary font-semibold text-sm uppercase">
-                {(userEmail || 'U').charAt(0)}
-              </div>
-              <div className="grid flex-1 text-left text-sm leading-tight">
-                <span className="truncate font-medium">{userEmail || 'User'}</span>
-                <div className="flex items-center gap-1.5 text-xs">
-                  <span className="inline-flex items-center rounded-full bg-primary/10 px-1.5 py-0.5 text-[10px] font-semibold text-primary leading-none">
-                    {pricingPlan.charAt(0).toUpperCase() + pricingPlan.slice(1)}
-                  </span>
-                  <span className="text-muted-foreground">{evaluationTimes} left</span>
+              <Link
+                href={`/auth/dashboard/${userId}`}
+                onClick={() => isMobile && setOpenMobile(false)}
+              >
+                <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary/15 text-primary font-semibold text-sm uppercase">
+                  {(userEmail || 'U').charAt(0)}
                 </div>
-              </div>
+                <div className="grid flex-1 text-left text-sm leading-tight">
+                  <span className="truncate font-medium">{userEmail || 'User'}</span>
+                  <div className="flex items-center gap-1.5 text-xs">
+                    <span className="inline-flex items-center rounded-full bg-primary/10 px-1.5 py-0.5 text-[10px] font-semibold text-primary leading-none">
+                      {pricingPlan.charAt(0).toUpperCase() + pricingPlan.slice(1)}
+                    </span>
+                    <span className="text-muted-foreground">{evaluationTimes} left</span>
+                  </div>
+                </div>
+              </Link>
             </SidebarMenuButton>
           </SidebarMenuItem>
         </SidebarMenu>
@@ -100,7 +111,8 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                 const isActive = pathname === item.url ||
                   (item.url.endsWith('/reports') && pathname?.startsWith(item.url)) ||
                   (item.url.endsWith('/settings') && pathname?.startsWith(item.url)) ||
-                  (item.url.endsWith('/notifications') && pathname?.startsWith(item.url))
+                  (item.url.endsWith('/notifications') && pathname?.startsWith(item.url)) ||
+                  (item.url.endsWith('/analytics') && pathname?.startsWith(item.url))
                 return (
                   <SidebarMenuItem key={item.title}>
                     <SidebarMenuButton asChild isActive={isActive}>

@@ -5,6 +5,9 @@ import { DATABASE_ID, COLLECTION_IDS } from '@/lib/env';
 import { ID, Query } from 'node-appwrite';
 import type { InsuranceCompanyDocument, UserDocument } from '@/lib/types/appwrite';
 import { getUserPermissions } from '@/lib/permissions';
+import { cookies } from 'next/headers';
+import { encryptData } from '@/utils/encrypt';
+import { revalidateTag } from 'next/cache';
 
 interface OnboardingData {
   userId: string;
@@ -88,12 +91,28 @@ export async function completeOnboarding(data: OnboardingData) {
       permissions
     );
 
+    // Refresh JWT with onboarding_completed flag and bust the user doc cache
+    const cookieStore = await cookies();
+    const timeToExpire = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
+    const updatedJwt = await encryptData(
+      { userId: data.userId, email: data.email, name: data.name, onboarding_completed: true },
+      timeToExpire
+    );
+    cookieStore.set('localSession', encodeURIComponent(updatedJwt), {
+      path: '/',
+      httpOnly: true,
+      sameSite: 'strict',
+      secure: process.env.NODE_ENV === 'production',
+      expires: timeToExpire,
+    });
+    revalidateTag(`user-doc-${data.userId}`);
+
     return { success: true };
   } catch (error: any) {
     console.error('Onboarding error:', error);
 
     if (error.code === 409) {
-      return { success: false, message: 'User account already exists' };
+      return { success: true }; // Already onboarded — modal will redirect to dashboard
     }
 
     return {

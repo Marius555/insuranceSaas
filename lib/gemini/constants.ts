@@ -1,6 +1,6 @@
 /**
  * Gemini API Constants
- * Configuration values for Gemini 2.5 Flash-Lite integration
+ * Configuration values for Gemini model integration
  */
 
 /**
@@ -9,8 +9,9 @@
 export const GEMINI_MODELS = {
   FLASH_LITE: 'gemini-2.5-flash-lite',  // Default - fastest, cheapest
   FLASH: 'gemini-2.5-flash',
-  FLASH_3: 'gemini-3-flash-preview',
+  FLASH_3: 'gemini-3-flash-preview',     // Preview - 3x faster than 2.5 Pro
   PRO: 'gemini-2.5-pro',
+  PRO_3: 'gemini-3-pro-preview',         // Preview - most capable
 } as const;
 
 /**
@@ -37,6 +38,34 @@ export const MAX_CONSISTENCY_CONFIG = {
   topK: 1,
   seed: 12345,
 } as const;
+
+/**
+ * Relaxed consistency configuration for damage analysis.
+ * Balances JSON structure consistency with enough entropy to commit to uncertain damage items.
+ * - temperature 0.4: Meaningful token diversity — model can include uncertain damage items without
+ *   hallucinating; JSON structure stays consistent (breaks around 0.7+)
+ * - topP 0.8: Wider probability mass — lets model consider damage it's not 100% sure about
+ * - topK 40: Matches DEFAULT_CONFIG — more token diversity reduces under-detection
+ * - seed removed: Fixed seed locked model into one conservative output trajectory per video
+ */
+export const RELAXED_CONSISTENCY_CONFIG = {
+  temperature: 0.4,
+  topP: 0.8,
+  topK: 40,
+} as const;
+
+/**
+ * System instruction for damage analysis calls.
+ * Applied before user content to orient the model toward comprehensive damage detection.
+ */
+export const DAMAGE_ANALYSIS_SYSTEM_INSTRUCTION = `You are a forensic vehicle damage assessor for insurance claims. Your sole purpose is to identify and document ALL visible damage.
+
+Key principles:
+- Always err on the side of inclusion — report every scratch, dent, chip, crack, and imperfection you can see
+- Never return an empty damagedParts array when a vehicle is present in the media
+- Low confidence about damage extent is NOT a reason to omit — include it with an honest description and lower confidence score
+- When uncertain about a component, include it with appropriate confidence scoring rather than omitting it
+- Your job is comprehensive damage identification, not conservative filtering`;
 
 /**
  * File size limits (Gemini API restrictions)
@@ -73,6 +102,11 @@ export const MODEL_RATE_LIMITS = {
     rpd: 20,
   },
   [GEMINI_MODELS.FLASH_3]: {
+    rpm: 5,
+    tpm: 250_000,
+    rpd: 20,
+  },
+  [GEMINI_MODELS.PRO_3]: {
     rpm: 5,
     tpm: 250_000,
     rpd: 20,

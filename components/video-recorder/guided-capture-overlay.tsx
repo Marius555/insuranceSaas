@@ -86,15 +86,15 @@ export function GuidedCaptureOverlay({
             key={step.label}
             className={cn(
               "flex items-center gap-2 px-2.5 py-1 rounded-full text-xs font-medium transition-all duration-300",
-              idx === currentStepIndex
+              idx === currentStepIndex && !(isLastStep && lastStepDone)
                 ? "bg-primary text-primary-foreground scale-105"
-                : idx < currentStepIndex
+                : idx < currentStepIndex || (idx === currentStepIndex && lastStepDone)
                   ? "bg-green-500/80 text-white"
                   : "bg-black/40 text-white/60"
             )}
           >
             <span className="w-4 h-4 rounded-full flex items-center justify-center text-[10px] bg-white/20">
-              {idx < currentStepIndex ? "✓" : idx + 1}
+              {idx < currentStepIndex || (idx === currentStepIndex && lastStepDone) ? "✓" : idx + 1}
             </span>
             <span className="hidden sm:inline">{step.label}</span>
           </div>
@@ -127,9 +127,20 @@ export function GuidedCaptureOverlay({
             {lastStepDone ? (
               <button
                 onClick={onFinish}
-                className="px-6 py-3 bg-primary text-primary-foreground rounded-lg text-sm font-semibold hover:bg-primary/90 transition-colors"
+                className="w-16 h-16 rounded-full border-4 border-white flex items-center justify-center transition-all hover:scale-105 active:scale-95"
+                aria-label="Done"
               >
-                Done
+                <svg
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="white"
+                  strokeWidth="3"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  className="w-8 h-8"
+                >
+                  <polyline points="20 6 9 17 4 12" />
+                </svg>
               </button>
             ) : (
               <button

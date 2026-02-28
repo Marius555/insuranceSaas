@@ -7,9 +7,10 @@ import { getOnboardingFlow, clearOnboardingFlow, type OnboardingFlow } from "@/l
 interface OnboardingWrapperProps {
   session: { id: string; email: string; name: string } | null;
   needsOnboarding: boolean;
+  insuranceEnabled: boolean;
 }
 
-export function OnboardingWrapper({ session, needsOnboarding }: OnboardingWrapperProps) {
+export function OnboardingWrapper({ session, needsOnboarding, insuranceEnabled }: OnboardingWrapperProps) {
   const [showModal, setShowModal] = useState(needsOnboarding);
   const [flowType, setFlowType] = useState<OnboardingFlow | null>(null);
 
@@ -36,6 +37,7 @@ export function OnboardingWrapper({ session, needsOnboarding }: OnboardingWrappe
       email={session.email}
       name={session.name}
       flowType={flowType}
+      insuranceEnabled={insuranceEnabled}
     />
   );
 }

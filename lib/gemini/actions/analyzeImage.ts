@@ -3,7 +3,7 @@
 import { retryWithFallback } from "../utils/retryWithFallback";
 import { recordTokenUsage } from "../rateLimit/storage";
 import { sanitizeGeminiError, isRateLimitError } from "../utils/sanitizeError";
-import { GEMINI_SAFETY_SETTINGS, SECURITY_CONFIG } from "../constants";
+import { GEMINI_SAFETY_SETTINGS, SECURITY_CONFIG, RELAXED_CONSISTENCY_CONFIG } from "../constants";
 import { scanMultipleImagesForInjection } from "../security/contentScanner";
 import { validateAutoDamageAnalysis } from "../utils/validateResponse";
 import { createImageAnalysisAuditEntry, logAnalysisRequest } from "../utils/auditLog";
@@ -155,7 +155,8 @@ Based on the visible external damage, infer possible internal/mechanical damage 
 - Only infer damages mechanically plausible given the OBSERVED external damage
 - Assign likelihood: "high" (very likely), "medium" (plausible), "low" (possible but uncertain)
 - Keep the list focused (3-8 items typically)
-- These are NOT included in any cost estimates
+- Provide an estimatedRepairCost range for each inferred damage (e.g., "$200 - $400")
+- These are NOT included in estimatedTotalRepairCost by default
 
 ### SURFACE CONTAMINATION CHECK
 Identify any substances covering or near the damage:
@@ -180,8 +181,12 @@ For each damaged part, provide:
 - Consider parts cost + labor for repair or replacement
 - Use realistic market pricing for auto body work
 
+VEHICLE PRESENCE:
+Set "vehiclePresent": true if a vehicle is visible in the image(s). Set false ONLY if no vehicle is present at all. Do NOT set false just because damage is unclear or the VIN cannot be read.
+
 Return a JSON object with the following structure:
 {
+  "vehiclePresent": true,
   "damagedParts": [
     {
       "part": "front bumper",
@@ -201,7 +206,8 @@ Return a JSON object with the following structure:
       "component": "radiator",
       "likelihood": "high",
       "description": "Front-end impact likely damaged the radiator or mounting brackets",
-      "basedOn": "Front bumper and grille area damage"
+      "basedOn": "Front bumper and grille area damage",
+      "estimatedRepairCost": "$200 - $400"
     }
   ],
   "overallSeverity": "moderate",
@@ -264,10 +270,7 @@ Provide thorough analysis based on visible damage across all ${images.length} im
         model: modelName,
         contents: [{ parts: contentParts }],
         config: {
-          temperature: 0.0,        // Maximum determinism
-          topP: 0.1,               // Narrow sampling
-          topK: 1,                 // Single best token
-          seed: 12345,             // Fixed seed for reproducibility
+          ...RELAXED_CONSISTENCY_CONFIG,
           maxOutputTokens: 2048,
           responseMIMEType: "application/json",
           safetySettings: GEMINI_SAFETY_SETTINGS,
@@ -282,6 +285,19 @@ Provide thorough analysis based on visible damage across all ${images.length} im
         .replace(/\n?```\s*$/i, '')
         .trim();
 
+      // Check for no-vehicle indicators before parsing JSON
+      const lowerText = cleanedText.toLowerCase();
+      const noVehicleIndicators = [
+        'no vehicle', 'cannot detect', 'unable to identify',
+        'no car', 'no automobile', 'does not contain a vehicle',
+        'no visible vehicle', 'cannot identify a vehicle',
+        'unable to detect', 'no damaged vehicle',
+      ];
+      const isNotJsonResponse = !cleanedText.startsWith('{') && !cleanedText.startsWith('[');
+      if (isNotJsonResponse && noVehicleIndicators.some(i => lowerText.includes(i))) {
+        throw new Error('NO_VEHICLE_DETECTED');
+      }
+
       let analysis: AutoDamageAnalysis;
       try {
         analysis = JSON.parse(cleanedText);
@@ -290,7 +306,17 @@ Provide thorough analysis based on visible damage across all ${images.length} im
         console.error('  - Error:', parseError instanceof Error ? parseError.message : 'Unknown');
         console.error('  - Response length:', cleanedText.length);
         console.error('  - First 500 chars:', cleanedText.substring(0, 500));
+        if (noVehicleIndicators.some(i => lowerText.includes(i))) {
+          throw new Error('NO_VEHICLE_DETECTED');
+        }
         throw new Error('Failed to parse AI response');
+      }
+
+      if (analysis.vehiclePresent === false) {
+        throw new Error('NO_VEHICLE_DETECTED');
+      }
+      if (!analysis.damagedParts || analysis.damagedParts.length === 0) {
+        throw new Error('NO_DAMAGE_DETECTED');
       }
 
       // Validate response against business rules

@@ -83,7 +83,7 @@ export default function SettingsLayout({
 
       <div className="flex flex-1 flex-col p-4 pt-0">
         <div className="mx-auto w-full max-w-2xl">
-          <nav className="mb-4 flex flex-wrap gap-1">
+          <nav className="mb-4 grid grid-cols-4 gap-1">
             {tabs.map((tab) => {
               const fullHref = `${basePath}/${tab.href}`
               const isActive = pathname === fullHref
@@ -92,6 +92,7 @@ export default function SettingsLayout({
                   key={tab.href}
                   variant={isActive ? "secondary" : "ghost"}
                   size="sm"
+                  className="w-full justify-center"
                   asChild
                 >
                   <Link href={fullHref} data-settings-tab>

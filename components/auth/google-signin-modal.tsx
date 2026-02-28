@@ -39,12 +39,14 @@ interface GoogleSignInModalProps {
   isOpen: boolean;
   onClose: () => void;
   flowType?: OnboardingFlow | null;
+  insuranceEnabled?: boolean;
 }
 
 export function GoogleSignInModal({
   isOpen,
   onClose,
   flowType,
+  insuranceEnabled = false,
 }: GoogleSignInModalProps) {
   const [step, setStep] = useState<ModalStep>("sign-in");
   const [error, setError] = useState("");
@@ -264,7 +266,7 @@ export function GoogleSignInModal({
       }}
     >
       <DialogContent
-        className="sm:max-w-md"
+        className="sm:max-w-md max-h-[90dvh] overflow-y-auto"
         onPointerDownOutside={(e) => {
           if (!canClose) e.preventDefault();
         }}
@@ -363,7 +365,7 @@ export function GoogleSignInModal({
         {step === "select-type" && (
           <>
             <DialogHeader>
-              <DialogTitle>Welcome! Let&apos;s get you set up</DialogTitle>
+              <DialogTitle className="pr-8">Welcome! Let&apos;s get you set up</DialogTitle>
             </DialogHeader>
             <div className="space-y-4 py-4">
               <p className="text-sm text-muted-foreground">
@@ -379,7 +381,7 @@ export function GoogleSignInModal({
                 {(flowType === "user" || !flowType) && (
                   <Button
                     variant="outline"
-                    className="h-auto py-4 px-4 justify-start"
+                    className="h-auto py-4 px-4 justify-start whitespace-normal"
                     onClick={() => handleUserTypeSelect("user")}
                     disabled={isSubmitting}
                   >
@@ -401,10 +403,10 @@ export function GoogleSignInModal({
                 )}
 
                 {/* Insurance Employee Option */}
-                {(flowType === "insurance" || !flowType) && (
+                {insuranceEnabled && (flowType === "insurance" || !flowType) && (
                   <Button
                     variant="outline"
-                    className="h-auto py-4 px-4 justify-start"
+                    className="h-auto py-4 px-4 justify-start whitespace-normal"
                     onClick={() => handleUserTypeSelect("insurance_adjuster")}
                     disabled={isSubmitting}
                   >
@@ -428,10 +430,10 @@ export function GoogleSignInModal({
                 )}
 
                 {/* Register Company Option */}
-                {(flowType === "insurance" || !flowType) && (
+                {insuranceEnabled && (flowType === "insurance" || !flowType) && (
                   <Button
                     variant="outline"
-                    className="h-auto py-4 px-4 justify-start"
+                    className="h-auto py-4 px-4 justify-start whitespace-normal"
                     onClick={() => setStep("company-registration")}
                     disabled={isSubmitting}
                   >

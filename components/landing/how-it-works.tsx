@@ -1,6 +1,5 @@
 "use client";
 
-import { useState } from "react";
 import { HugeiconsIcon } from "@hugeicons/react";
 import {
   Upload04Icon,
@@ -11,6 +10,7 @@ import {
   Shield01Icon,
 } from "@hugeicons/core-free-icons";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import { Badge } from "@/components/ui/badge";
 
 const insuranceSteps = [
   {
@@ -24,7 +24,7 @@ const insuranceSteps = [
     icon: SparklesIcon,
     title: "AI Analysis",
     description:
-      "Our Custom AI model processes media, identifies damage, extracts vehicle details",
+      "Our custom AI model processes media, identifies damage, extracts vehicle details",
   },
   {
     number: 3,
@@ -78,13 +78,16 @@ function StepCard({
     description: string;
   };
 }) {
-  const Icon = step.icon;
-
   return (
     <div className="relative flex flex-col items-center text-center">
-      {/* Icon Circle */}
-      <div className="flex items-center justify-center size-16 rounded-full bg-primary/10 text-primary mb-4 ring-4 ring-primary/5">
-        <HugeiconsIcon icon={Icon} className="size-7 text-primary" strokeWidth={2} />
+      {/* Icon circle with step number badge */}
+      <div className="relative mb-4">
+        <div className="flex items-center justify-center size-16 rounded-full bg-primary/10 text-primary ring-4 ring-primary/5">
+          <HugeiconsIcon icon={step.icon} className="size-7 text-primary" strokeWidth={2} />
+        </div>
+        <span className="absolute -top-1 -right-1 flex items-center justify-center size-5 rounded-full bg-primary text-primary-foreground text-xs font-bold">
+          {step.number}
+        </span>
       </div>
 
       {/* Content */}
@@ -93,7 +96,7 @@ function StepCard({
         {step.description}
       </p>
 
-      {/* Connecting Line (not for last item) */}
+      {/* Connecting line (not for last item) */}
       {step.number < 4 && (
         <div className="hidden lg:block absolute top-8 left-[calc(50%+4rem)] w-[calc(100%-8rem)] border-t-2 border-dashed border-border" />
       )}
@@ -101,44 +104,53 @@ function StepCard({
   );
 }
 
-export function HowItWorks() {
+export function HowItWorks({ insuranceEnabled }: { insuranceEnabled: boolean }) {
   return (
     <section
       id="how-it-works"
-      className="bg-muted/30 min-h-screen flex items-center"
+      className="bg-muted/30 py-24"
     >
-      <div className="max-w-7xl mx-auto px-4 py-16 w-full">
+      <div className="max-w-7xl mx-auto px-4 w-full">
         <div className="text-center mb-12 space-y-4">
-          <h2 className="text-3xl md:text-4xl font-bold">How It Works</h2>
+          <Badge variant="outline" className="mb-2">How It Works</Badge>
+          <h2 className="text-3xl md:text-4xl font-bold">From Damage to Report in Minutes</h2>
           <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
-            Simple, fast, and secure process for all users
+            Simple, fast, and secure — no appointments or specialists required
           </p>
         </div>
 
-        <Tabs defaultValue="insurance" className="w-full">
-          <TabsList className="grid w-full max-w-md mx-auto grid-cols-2 mb-12">
-            <TabsTrigger value="insurance">For Insurance Companies</TabsTrigger>
-            <TabsTrigger value="owners">For Car Owners</TabsTrigger>
-          </TabsList>
+        {insuranceEnabled ? (
+          <Tabs defaultValue="owners" className="w-full">
+            <TabsList className="grid w-full max-w-md mx-auto grid-cols-2 mb-12">
+              <TabsTrigger value="owners">For Car Owners</TabsTrigger>
+              <TabsTrigger value="insurance">For Insurance Companies</TabsTrigger>
+            </TabsList>
 
-          <div className="grid [&>*]:col-start-1 [&>*]:row-start-1">
-            <TabsContent value="insurance" forceMount className="data-[state=inactive]:invisible">
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8 lg:gap-4">
-                {insuranceSteps.map((step) => (
-                  <StepCard key={step.number} step={step} />
-                ))}
-              </div>
-            </TabsContent>
+            <div className="grid [&>*]:col-start-1 [&>*]:row-start-1">
+              <TabsContent value="owners" forceMount className="data-[state=inactive]:invisible">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8 lg:gap-4">
+                  {carOwnerSteps.map((step) => (
+                    <StepCard key={step.number} step={step} />
+                  ))}
+                </div>
+              </TabsContent>
 
-            <TabsContent value="owners" forceMount className="data-[state=inactive]:invisible">
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8 lg:gap-4">
-                {carOwnerSteps.map((step) => (
-                  <StepCard key={step.number} step={step} />
-                ))}
-              </div>
-            </TabsContent>
+              <TabsContent value="insurance" forceMount className="data-[state=inactive]:invisible">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8 lg:gap-4">
+                  {insuranceSteps.map((step) => (
+                    <StepCard key={step.number} step={step} />
+                  ))}
+                </div>
+              </TabsContent>
+            </div>
+          </Tabs>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8 lg:gap-4">
+            {carOwnerSteps.map((step) => (
+              <StepCard key={step.number} step={step} />
+            ))}
           </div>
-        </Tabs>
+        )}
       </div>
     </section>
   );

@@ -7,9 +7,10 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { CurrencyAmount } from '@/components/ui/currency-amount';
 import { HugeiconsIcon } from '@hugeicons/react';
-import { Image01Icon, File01Icon, AlertCircleIcon } from '@hugeicons/core-free-icons';
+import { Image01Icon, File01Icon, AlertCircleIcon, ArrowLeft02Icon } from '@hugeicons/core-free-icons';
 import { ReportActions } from './report-actions';
 import { ReportFeedbackButton } from './report-feedback-button';
+import { InferredDamagesSection } from './inferred-damages-section';
 import {
   Breadcrumb,
   BreadcrumbItem,
@@ -27,9 +28,12 @@ import { NotificationBell } from "@/components/notifications/notification-bell";
 import { UserAvatarMenu } from "@/components/dashboardComponents/user-avatar-menu";
 import Link from "next/link";
 
+
 interface ReportPageProps {
   params: Promise<{ id: string }>;
 }
+
+
 
 export default async function ReportPage({ params }: ReportPageProps) {
   const { id } = await params;
@@ -38,6 +42,8 @@ export default async function ReportPage({ params }: ReportPageProps) {
   if (!session) {
     redirect(`/?auth=required&returnTo=/auth/reports/${id}`);
   }
+
+
 
   const reportResult = await getReportById(id);
 
@@ -162,7 +168,17 @@ export default async function ReportPage({ params }: ReportPageProps) {
               {report.claim_number}
             </h1>
 
-            <div className="flex items-center justify-end gap-2">
+            <div className='flex flex-row justify-between items-center gap-2'>
+          
+              {/* <Link href={`/auth/dashboard/${id}/reports`}>
+                <Button variant="outline" size="sm" className="h-9 px-2">
+                  <HugeiconsIcon icon={ArrowLeft02Icon} size={16} />
+                  <span className="sr-only">Back to reports</span>
+                </Button>
+              </Link> */}
+                
+              
+              <div className="flex items-center gap-2">
               {/* Action buttons */}
               <div className="flex items-center gap-2 flex-wrap">
                 <ReportFeedbackButton reportId={report.$id} />
@@ -215,6 +231,7 @@ export default async function ReportPage({ params }: ReportPageProps) {
                   </Badge>
                 )}
               </div>
+            </div>
             </div>
           </div>
 
@@ -519,18 +536,6 @@ export default async function ReportPage({ params }: ReportPageProps) {
                   </div>
                 </div>
 
-                {/* Mismatches Warning */}
-                {vehicleVerification.mismatches && vehicleVerification.mismatches.length > 0 && (
-                  <div className="px-4 py-3 bg-red-50 dark:bg-red-950/30 border-t border-red-200 dark:border-red-900">
-                    <p className="text-sm font-semibold text-red-900 dark:text-red-300 mb-1">Mismatches Detected:</p>
-                    <ul className="text-sm text-red-700 dark:text-red-400 list-disc list-inside">
-                      {vehicleVerification.mismatches.split(', ').map((mismatch: string, idx: number) => (
-                        <li key={idx}>{mismatch}</li>
-                      ))}
-                    </ul>
-                  </div>
-                )}
-
                 {/* Notes */}
                 {vehicleVerification.notes && (
                   <div className="px-4 py-3 bg-muted/50 border-t border-border">
@@ -553,22 +558,16 @@ export default async function ReportPage({ params }: ReportPageProps) {
                     <div key={detail.$id} className="px-4 py-3">
                       <div className="flex items-center justify-between mb-1">
                         <div className="flex items-center gap-2">
-                          <span className="text-sm font-medium text-foreground">{detail.part_name}</span>
+                          <span className="text-sm font-medium text-foreground capitalize">{detail.part_name}</span>
                           {detail.estimated_repair_cost && (
-                            <span className="text-sm font-semibold text-muted-foreground">— {detail.estimated_repair_cost}</span>
+                            <span className="text-sm font-semibold text-muted-foreground">{detail.estimated_repair_cost}</span>
                           )}
                         </div>
                         <div className="flex items-center gap-1.5">
                           {detail.repair_or_replace && detail.repair_or_replace !== 'undetermined' && (
-                            <Badge className={
-                              detail.repair_or_replace === 'replace'
-                                ? 'bg-red-100 text-red-800 dark:bg-red-900/50 dark:text-red-300'
-                                : detail.repair_or_replace === 'repair'
-                                  ? 'bg-blue-100 text-blue-800 dark:bg-blue-900/50 dark:text-blue-300'
-                                  : 'bg-muted text-muted-foreground'
-                            }>
+                            <span className="text-sm text-muted-foreground ">
                               {detail.repair_or_replace}
-                            </Badge>
+                            </span>
                           )}
                           <Badge className={getSeverityColor(detail.severity)}>
                             {detail.severity}
@@ -591,37 +590,14 @@ export default async function ReportPage({ params }: ReportPageProps) {
 
             {/* Inferred Internal Damages Section */}
             {inferredDamages.length > 0 && (
-              <>
-                <div className="border-t border-dashed border-border" />
-                <div className="bg-muted px-4 py-2 border-b border-border">
-                  <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">
-                    Inferred Internal Damages
-                  </h2>
-                  <p className="text-xs text-muted-foreground mt-0.5">
-                    Possible internal damage based on visible external damage. Not included in cost estimates.
-                  </p>
-                </div>
-                <div className="divide-y divide-border">
-                  {inferredDamages.map((detail) => (
-                    <div key={detail.$id} className="px-4 py-3 bg-muted/10">
-                      <div className="flex items-center justify-between mb-1">
-                        <span className="text-sm font-medium text-foreground">{detail.part_name}</span>
-                        {detail.inferred_likelihood && (
-                          <Badge className={getLikelihoodColor(detail.inferred_likelihood)}>
-                            {detail.inferred_likelihood}
-                          </Badge>
-                        )}
-                      </div>
-                      {detail.description && (
-                        <p className="text-sm text-muted-foreground">{detail.description}</p>
-                      )}
-                      {detail.inferred_based_on && (
-                        <p className="text-xs text-muted-foreground mt-1">Based on: {detail.inferred_based_on}</p>
-                      )}
-                    </div>
-                  ))}
-                </div>
-              </>
+              <InferredDamagesSection
+                inferredDamages={inferredDamages}
+                getLikelihoodColor={{
+                  high: 'bg-orange-100 text-orange-800 dark:bg-orange-900/50 dark:text-orange-300',
+                  medium: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/50 dark:text-yellow-300',
+                  low: 'bg-muted text-muted-foreground',
+                }}
+              />
             )}
           </div>
         </div>

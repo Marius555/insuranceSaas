@@ -17,6 +17,7 @@ import {
   DrawerTitle,
   DrawerTrigger,
 } from "@/components/ui/drawer";
+import { cn } from "@/lib/utils";
 import { useIsMobile } from "@/hooks/use-is-mobile";
 import { Button } from "@/components/ui/button";
 import { useCamera } from "@/hooks/use-camera";
@@ -117,12 +118,15 @@ export function VideoRecorderModal({
 
   const {
     isRecording,
+    isPaused,
     duration,
     recordedFile,
     recordedUrl,
     error: recorderError,
     startRecording,
     stopRecording,
+    pauseRecording,
+    resumeRecording,
     resetRecording,
   } = useVideoRecorder({
     stream,
@@ -275,6 +279,8 @@ export function VideoRecorderModal({
 
   // Use ref to avoid stale closure in handleOpenChange
   const isActiveStateRef = useRef(false);
+  // Synchronous upload lock — prevents stale-closure double-submit and mid-upload navigation
+  const isUploadingRef = useRef(false);
   useEffect(() => {
     isActiveStateRef.current = isActiveState;
   }, [isActiveState]);
@@ -290,6 +296,7 @@ export function VideoRecorderModal({
       setOpen(isOpen);
       if (!isOpen) {
         // Cleanup on close
+        isUploadingRef.current = false;
         stopCamera();
         resetRecording();
         clearPhotos();
@@ -315,30 +322,39 @@ export function VideoRecorderModal({
     }
   };
 
-  const handleSelectMode = (mode: CaptureMode) => {
+  const handleSelectMode = async (mode: CaptureMode) => {
     setCaptureMode(mode);
-    setModalState("ready");
+    if (mode === "guided") {
+      // Skip "ready" screen — go directly to photo capture
+      setQualitySeconds(0);
+      lastDurationRef.current = 0;
+      setGuidedStepIndex(0);
+      setGuidedStepPhotoCount(0);
+      clearPhotos();
+      await requestMotionPermission();
+      setGuidedPhase('photos');
+      setModalState("recording");
+    } else {
+      setModalState("ready");
+    }
   };
 
   const handleStartRecording = async () => {
     // Reset quality tracking
     setQualitySeconds(0);
     lastDurationRef.current = 0;
-    setGuidedStepIndex(0);
-    setGuidedStepPhotoCount(0);
-    clearPhotos();
-    // Request motion permission for iOS
-    await requestMotionPermission();
 
-    if (captureMode === "guided") {
-      // Guided mode: start with photo capture phase (no video recording yet)
-      setGuidedPhase('photos');
-      setModalState("recording");
-    } else {
-      // Free mode: start video recording immediately
+    if (captureMode === "guided" && guidedPhase === 'video') {
+      // Guided video phase: start the actual video recording
+      await requestMotionPermission();
       startRecording();
-      setModalState("recording");
+      return;
     }
+
+    // Free mode: start video recording immediately
+    await requestMotionPermission();
+    startRecording();
+    setModalState("recording");
   };
 
   // Guided mode: capture photo at current step, returns true if successful
@@ -358,15 +374,23 @@ export function VideoRecorderModal({
     setGuidedStepPhotoCount(0);
   }, []);
 
-  // Guided mode: all photos done, transition to video recording phase
+  // Guided mode: all photos done, transition to video recording phase (user clicks start)
   const handleGuidedFinish = useCallback(() => {
     setGuidedPhase('video');
-    startRecording();
-  }, [startRecording]);
+    // Don't start recording — user will click start button
+  }, []);
 
   const handleStopRecording = () => {
     stopRecording();
     // State transition handled in useEffect above
+  };
+
+  const handlePauseRecording = () => {
+    pauseRecording();
+  };
+
+  const handleResumeRecording = () => {
+    resumeRecording();
   };
 
   const handleCancel = () => {
@@ -389,12 +413,16 @@ export function VideoRecorderModal({
   };
 
   const handleSubmitQuick = async () => {
+    if (isUploadingRef.current) return;
+    isUploadingRef.current = true;
     if (!processedFile) {
       console.error('[VideoRecorder] No processed file to submit');
+      isUploadingRef.current = false;
       return;
     }
     if (limitReached) {
       toast.warning("Daily evaluation limit reached. Upgrade your plan for more evaluations.");
+      isUploadingRef.current = false;
       return;
     }
 
@@ -410,12 +438,14 @@ export function VideoRecorderModal({
       if (!testBuffer || testBuffer.byteLength === 0) {
         console.error('[VideoRecorder] File appears empty or corrupt');
         toast.error("Video file appears to be empty or corrupt. Please record again.");
+        isUploadingRef.current = false;
         return;
       }
       console.log('[VideoRecorder] File verification passed');
     } catch (e) {
       console.error('[VideoRecorder] Unable to read file:', e);
       toast.error("Unable to read video file. Please record again.");
+      isUploadingRef.current = false;
       return;
     }
 
@@ -475,15 +505,18 @@ export function VideoRecorderModal({
         console.error('[VideoRecorder] Submission failed:', result.message);
         toast.error(result.message || "Failed to submit report");
         setModalState("preview");
+        isUploadingRef.current = false;
       }
     } catch (err) {
       console.error('[VideoRecorder] Submission error:', err);
       toast.error(err instanceof Error ? err.message : "Submission failed");
       setModalState("preview");
+      isUploadingRef.current = false;
     }
   };
 
   const handleGoToPolicyStep = () => {
+    if (isUploadingRef.current) return;
     if (limitReached) {
       toast.warning("Daily evaluation limit reached. Upgrade your plan for more evaluations.");
       return;
@@ -492,8 +525,11 @@ export function VideoRecorderModal({
   };
 
   const handleSubmitWithPolicy = async (policySubmission: PolicySubmission) => {
+    if (isUploadingRef.current) return;
+    isUploadingRef.current = true;
     if (!processedFile) {
       console.error('[VideoRecorder] No processed file to submit');
+      isUploadingRef.current = false;
       return;
     }
 
@@ -513,12 +549,14 @@ export function VideoRecorderModal({
       if (!testBuffer || testBuffer.byteLength === 0) {
         console.error('[VideoRecorder] Video file appears empty or corrupt');
         toast.error("Video file appears to be empty or corrupt. Please record again.");
+        isUploadingRef.current = false;
         return;
       }
       console.log('[VideoRecorder] Video file verification passed');
     } catch (e) {
       console.error('[VideoRecorder] Unable to read video file:', e);
       toast.error("Unable to read video file. Please record again.");
+      isUploadingRef.current = false;
       return;
     }
 
@@ -584,15 +622,18 @@ export function VideoRecorderModal({
         console.error('[VideoRecorder] Submission failed:', result.message);
         toast.error(result.message || "Failed to submit report");
         setModalState("policy-step");
+        isUploadingRef.current = false;
       }
     } catch (err) {
       console.error('[VideoRecorder] Submission error:', err);
       toast.error(err instanceof Error ? err.message : "Submission failed");
       setModalState("policy-step");
+      isUploadingRef.current = false;
     }
   };
 
   const handleBackFromPolicy = () => {
+    if (isUploadingRef.current) return;
     setModalState("preview");
   };
 
@@ -616,7 +657,10 @@ export function VideoRecorderModal({
 
   // Shared modal body content
   const modalBody = (
-    <div className="flex-1 flex flex-col p-4 sm:p-6 overflow-y-auto min-h-0">
+    <div className={cn(
+      "flex-1 flex flex-col min-h-0",
+      modalState !== "uploading" && "p-4 sm:p-6 overflow-y-auto"
+    )}>
           {/* Permission Prompt */}
           {modalState === "permission-prompt" && (
             <div className="flex flex-col items-center justify-center h-full gap-6 text-center">
@@ -626,7 +670,7 @@ export function VideoRecorderModal({
               <div className="space-y-2">
                 <h3 className="text-lg font-semibold">
                   Camera Access Required
-                </h3>
+                </h3> 
                 <p className="text-sm text-muted-foreground max-w-sm">
                   To record video of vehicle damage, we need access to your
                   camera. Your video will be securely uploaded for AI analysis.
@@ -724,8 +768,8 @@ export function VideoRecorderModal({
                 {/* Recording indicator — shown during actual video recording */}
                 {isRecording && (
                   <div className="absolute top-4 left-4 flex items-center gap-2 bg-black/60 px-3 py-1.5 rounded-full z-20">
-                    <div className="w-3 h-3 rounded-full bg-destructive animate-pulse" />
-                    <span className="text-white text-sm font-medium">REC</span>
+                    <div className={cn("w-3 h-3 rounded-full", isPaused ? "bg-amber-500" : "bg-destructive animate-pulse")} />
+                    <span className="text-white text-sm font-medium">{isPaused ? "PAUSED" : "REC"}</span>
                   </div>
                 )}
 
@@ -747,7 +791,7 @@ export function VideoRecorderModal({
                 )}
 
                 {/* Guided video phase instruction overlay */}
-                {captureMode === "guided" && guidedPhase === 'video' && isRecording && (
+                {captureMode === "guided" && guidedPhase === 'video' && isRecording && !isPaused && (
                   <div className="absolute top-14 left-1/2 -translate-x-1/2 z-10">
                     <div className="bg-black/70 backdrop-blur-sm rounded-lg px-4 py-2">
                       <p className="text-white text-sm font-medium text-center">
@@ -762,10 +806,13 @@ export function VideoRecorderModal({
               {(captureMode === "free" || !isRecording || (captureMode === "guided" && guidedPhase === 'video')) && !(captureMode === "guided" && guidedPhase === 'photos' && modalState === "recording") && (
                 <RecordingControls
                   isRecording={isRecording}
+                  isPaused={isPaused}
                   duration={duration}
                   maxDuration={MAX_DURATION_SECONDS}
                   onStart={handleStartRecording}
                   onStop={handleStopRecording}
+                  onPause={handlePauseRecording}
+                  onResume={handleResumeRecording}
                   onCancel={handleCancel}
                 />
               )}
@@ -836,7 +883,7 @@ export function VideoRecorderModal({
 
           {/* Uploading */}
           {modalState === "uploading" && (
-            <div className="flex flex-col items-center justify-center h-full">
+            <div className="flex flex-1 min-h-0 items-center justify-center">
               <ProgressIndicator currentStep={uploadStep} />
             </div>
           )}
@@ -873,7 +920,7 @@ export function VideoRecorderModal({
             if (isActiveStateRef.current) e.preventDefault();
           }}
         >
-          <DrawerHeader className="px-6 py-4 border-b flex-shrink-0">
+          <DrawerHeader className="px-6 py-4 border-b shrink-0">
             <DrawerTitle>{getModalTitle()}</DrawerTitle>
           </DrawerHeader>
           {modalBody}
@@ -899,7 +946,7 @@ export function VideoRecorderModal({
           if (isActiveStateRef.current) e.preventDefault();
         }}
       >
-        <DialogHeader className="px-3 py-3 border-b shrink-0 flex flex-row items-center justify-between">
+        <DialogHeader className="shrink-0">
           <DialogTitle>{getModalTitle()}</DialogTitle>
           
         </DialogHeader>

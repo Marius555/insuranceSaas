@@ -152,6 +152,7 @@ export interface InferredDamage {
   likelihood: 'high' | 'medium' | 'low';
   description: string;
   basedOn: string;
+  estimatedRepairCost?: string; // Cost range e.g., "$200 - $400"
 }
 
 // ========================================
@@ -231,6 +232,7 @@ export interface PreExistingDamageAssessment {
 }
 
 export interface AutoDamageAnalysis {
+  vehiclePresent: boolean; // Gemini sets false ONLY when no vehicle is present at all
   damagedParts: DamagedPart[];
   inferredInternalDamages?: InferredDamage[];
   overallSeverity: 'minor' | 'moderate' | 'severe' | 'total_loss';
@@ -303,6 +305,11 @@ export interface EnhancedAutoDamageAnalysis extends AutoDamageAnalysis {
   contaminationAssessment?: ContaminationAssessment;
   rustCorrosionAssessment?: RustCorrosionAssessment;
   preExistingDamageAssessment?: PreExistingDamageAssessment;
+  // Policy validation
+  policyValidation?: {
+    isValidAutoPolicy: boolean;
+    reason: string | null;
+  };
 }
 
 export interface PolicyDocumentInput {

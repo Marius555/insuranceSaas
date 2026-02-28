@@ -389,7 +389,6 @@ export function PolicyAnalysisTabContent({ onSuccess }: PolicyAnalysisTabContent
                       <DropdownMenuTrigger asChild>
                         <button className="text-sm text-primary hover:underline flex items-center gap-1">
                           Previous Policies
-                          <HugeiconsIcon icon={Add01Icon} className="h-3 w-3" />
                         </button>
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end" className="w-80">

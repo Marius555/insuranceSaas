@@ -30,17 +30,13 @@ export default function UserDashboard() {
   const { userId, role } = useUser();
   const router = useRouter();
 
-  // Insurance adjusters should go to their reports page directly
   useEffect(() => {
-    if (role === 'insurance_adjuster') {
+    if (role === "insurance_adjuster") {
       router.replace(`/auth/dashboard/${userId}/reports`);
     }
   }, [role, userId, router]);
 
-  // Show nothing while redirecting insurance adjusters
-  if (role === 'insurance_adjuster') {
-    return null;
-  }
+  if (role === "insurance_adjuster") return null;
 
   return (
     <SidebarInset>
@@ -76,19 +72,20 @@ export default function UserDashboard() {
             </EmptyMedia>
             <EmptyTitle>Submit a New Report</EmptyTitle>
             <EmptyDescription>
-              Record a video or upload media to submit a new damage report. Our AI will analyze the damage automatically.
+              Record a video or upload media to submit a new damage report.
+              Our AI will analyze the damage automatically.
             </EmptyDescription>
-            <div className="mt-2 flex w-full gap-2">
-              <div className="flex-1 md:hidden">
-                <FilmVideoButton className="w-full" />
-              </div>
-              <ReportUploadModal>
-                <Button variant="secondary" className="flex-1 w-full">
-                  <HugeiconsIcon icon={AttachmentIcon} /> Upload video
-                </Button>
-              </ReportUploadModal>
-            </div>
           </EmptyHeader>
+          <div className="flex gap-2 justify-center mt-4">
+            <div className="md:hidden">
+              <FilmVideoButton />
+            </div>
+            <ReportUploadModal>
+              <Button variant="secondary">
+                <HugeiconsIcon icon={AttachmentIcon} /> Upload video
+              </Button>
+            </ReportUploadModal>
+          </div>
         </Empty>
       </div>
     </SidebarInset>

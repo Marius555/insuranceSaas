@@ -8,6 +8,7 @@ import { HowItWorks } from "@/components/landing/how-it-works";
 import { Stats } from "@/components/landing/stats";
 import { Footer } from "@/components/landing/footer";
 import { OnboardingWrapper } from "@/components/auth/onboarding-wrapper";
+import { INSURANCE_COMPANIES_ALLOWED } from "@/lib/env";
 
 
 // CRITICAL: Force dynamic rendering to prevent caching
@@ -41,13 +42,14 @@ export default async function LandingPage() {
       <OnboardingWrapper
         session={session}
         needsOnboarding={needsOnboarding}
+        insuranceEnabled={INSURANCE_COMPANIES_ALLOWED}
       />
 
-      <Header session={session} userDoc={userDoc} />
+      <Header session={session} userDoc={userDoc} insuranceEnabled={INSURANCE_COMPANIES_ALLOWED} />
       <main>
-        <HeroWithUpload session={session} />
-        <Features />
-        <HowItWorks />
+        <HeroWithUpload session={session} insuranceEnabled={INSURANCE_COMPANIES_ALLOWED} />
+        <Features insuranceEnabled={INSURANCE_COMPANIES_ALLOWED} />
+        <HowItWorks insuranceEnabled={INSURANCE_COMPANIES_ALLOWED} />
         <Stats />
       </main>
       <Footer />

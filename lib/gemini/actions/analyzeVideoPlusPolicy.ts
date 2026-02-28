@@ -4,7 +4,7 @@ import { retryWithFallback } from "../utils/retryWithFallback";
 import { recordTokenUsage } from "../rateLimit/storage";
 import { fileToBase64 } from "../utils/fileToBase64";
 import { sanitizeGeminiError, isRateLimitError } from "../utils/sanitizeError";
-import { GEMINI_MODELS, GEMINI_SAFETY_SETTINGS } from "../constants";
+import { GEMINI_MODELS, GEMINI_SAFETY_SETTINGS, RELAXED_CONSISTENCY_CONFIG, DAMAGE_ANALYSIS_SYSTEM_INSTRUCTION } from "../constants";
 import type {
   GeminiResult,
   EnhancedAutoDamageAnalysis,
@@ -113,6 +113,7 @@ When extracting vehicle identification details (license plate, VIN, make, model,
 - NEVER guess, infer, assume, or use example/placeholder values
 - NEVER use these example values: "ABC123", "ABC-123", "XYZ789", "1HGBH41JXMN109186"
 - Better to return null than incorrect data - this is for FRAUD PREVENTION
+- NEVER use a policy date (effective date, renewal date, signing date, expiration date, policy period, start date, end date, issue date) as the vehicle's model year. Policy dates and vehicle model years are COMPLETELY DIFFERENT concepts.
 
 Examples of when to use null:
 - License plate not visible in video → licensePlate: null
@@ -121,6 +122,19 @@ Examples of when to use null:
 - Make/model badges not readable → make: null, model: null
 
 This instruction overrides ALL examples below. When in doubt, use null.
+
+═══════════════════════════════════════════════════════════════════
+POLICY DOCUMENT VALIDATION
+═══════════════════════════════════════════════════════════════════
+
+Before analyzing, verify the uploaded PDF is a valid auto/vehicle insurance policy.
+
+Valid indicators: vehicle coverage sections, insured vehicle details (make/model/VIN),
+policy number, coverage limits, insurance company name.
+
+If NOT a valid auto insurance policy (e.g., health insurance, receipts, random documents),
+include in your JSON: "policyValidation": { "isValidAutoPolicy": false, "reason": "..." }
+If valid: "policyValidation": { "isValidAutoPolicy": true, "reason": null }
 
 ═══════════════════════════════════════════════════════════════════
 
@@ -213,7 +227,8 @@ Based on the visible external damage, infer possible internal/mechanical damage 
 - Only infer damages mechanically plausible given the OBSERVED external damage
 - Assign likelihood: "high" (very likely), "medium" (plausible), "low" (possible but uncertain)
 - Keep the list focused (3-8 items typically)
-- These are NOT included in estimatedTotalRepairCost or any payout calculations
+- Provide an estimatedRepairCost range for each inferred damage (e.g., "$200 - $400")
+- These are NOT included in estimatedTotalRepairCost or any payout calculations by default
 
 ### STEP 2: VIDEO ANALYSIS - Vehicle Identification (CRITICAL for fraud prevention)
 Extract ALL visible vehicle identification details from the video:
@@ -256,9 +271,11 @@ You MUST extract vehicle details ONLY from the policy document text. DO NOT use 
 1. **License plate number** - Registered plate number
 2. **VIN** - Vehicle identification number
 3. **Make and Model** - Manufacturer and model name
-4. **Year** - The vehicle's MODEL YEAR (manufacturing year), NOT the policy signing date, effective date, start date, or renewal date. Look for fields explicitly labeled "model year", "year of manufacture", "vehicle year", or similar. If the policy only shows dates related to the policy period (effective date, expiration date, signing date, renewal date), those are NOT the vehicle year — set year to null.
-   **Example**: Policy says "Effective Date: 01/01/2025" or "Policy Year: 2025" → this is NOT the vehicle model year → year: null.
+4. **Year** - The vehicle's MODEL YEAR (manufacturing year) ONLY. You MUST IGNORE these date fields entirely — they are NEVER the vehicle year: "Effective Date", "Issue Date", "Policy Year", "Expiration Date", "Renewal Date", "Policy Period", "Start Date", "End Date", "Signing Date", "Coverage Period".
+   ONLY extract the year if you find a field explicitly labeled "Vehicle Year", "Model Year", "Year of Manufacture", "Manufacture Year", or "Vehicle Model Year". If no such field exists → year: null.
+   **Example**: Policy says "Effective Date: 01/01/2025" or "Policy Year: 2025" → these are policy dates, NOT the vehicle model year → year: null.
    **Example**: Policy says "Vehicle Year: 2019" or "Model Year: 2019" → year: 2019.
+   **Example**: Policy only contains dates like "01/15/2025" without any "Vehicle Year" or "Model Year" label → year: null.
 5. **Color** - Registered color
 6. **Any other identifying information**
 
@@ -400,10 +417,14 @@ Provide a clear determination:
   - Non-covered items: $W
   - **Estimated payout: $[Y - Z]**
 
+## VEHICLE PRESENCE
+Set "vehiclePresent": true if a vehicle is visible in the video. Set false ONLY if no vehicle is present at all. Do NOT set false just because damage is unclear or the VIN cannot be read.
+
 ## OUTPUT FORMAT
 Return ONLY valid JSON (no markdown) with this exact structure:
 
 {
+  "vehiclePresent": true,
   "damagedParts": [
     {
       "part": "front bumper",
@@ -423,7 +444,8 @@ Return ONLY valid JSON (no markdown) with this exact structure:
       "component": "radiator",
       "likelihood": "high",
       "description": "Front-end impact at bumper level likely damaged the radiator or its mounting brackets",
-      "basedOn": "Severe front bumper and hood damage from collision"
+      "basedOn": "Severe front bumper and hood damage from collision",
+      "estimatedRepairCost": "$200 - $400"
     }
   ],
   "overallSeverity": "severe",
@@ -447,7 +469,7 @@ Return ONLY valid JSON (no markdown) with this exact structure:
       "vin": null,           // Not found in provided policy pages
       "make": "Ford",        // Listed in policy
       "model": "Escape",     // Listed in policy
-      "year": 2018,          // Listed in policy as vehicle model year
+      "year": 2018,          // MUST be from a field labeled "Vehicle Year"/"Model Year", NOT from any policy date field. Set null if no such field exists
       "color": "Oxford White" // Listed in policy
     },
     "verificationStatus": "insufficient_data",
@@ -586,6 +608,27 @@ When extracting coverage limits from the policy document:
 
 IMPORTANT: Do NOT convert insurance terms to numbers. Return them as strings exactly as shown above.
 
+## COVERAGE LIMIT KEY NAMES (REQUIRED)
+
+You MUST use ONLY these exact keys in the coverageLimits object:
+- "collision"     — collision/impact damage coverage
+- "comprehensive" — comprehensive/non-collision damage (CASCO in European markets; fire, theft, weather, etc.)
+- "liability"     — third-party liability (TPL, OC, OCTA, Civil Liability, etc.)
+
+Regional terminology mapping:
+- CASCO (European) → split into "collision" and "comprehensive" OR use "comprehensive" if CASCO covers both
+- TPL / OC / OCTA / Civil Liability / Third-Party Liability → "liability"
+- Fire & Theft / Partial CASCO → "comprehensive"
+
+Do NOT invent other key names. Omit a key entirely if that coverage type is absent from the policy.
+
+## DAMAGE DETECTION RULE (INCLUSIVITY)
+Include ALL visible damage in damagedParts, no matter how minor. This is the mirror of the vehiclePresent rule:
+- DO NOT return an empty damagedParts array unless you have examined the full video and are CERTAIN the vehicle has zero visible damage of any kind.
+- If you observe any scuff, scratch, dent, crack, chip, deformation, or discoloration that could result from an incident — include it, even at low confidence.
+- LOW confidence in the extent or cause of damage is NOT a reason to omit it. Include the entry with an honest description and "severity": "minor".
+- This does NOT conflict with anti-hallucination rules — only report what you see. The difference is: lower your inclusion threshold for damage vs. for vehicle identity fields.
+
 ## IMPORTANT RULES
 1. Be thorough but concise
 2. ALWAYS cite specific policy sections
@@ -636,10 +679,8 @@ IMPORTANT: Do NOT convert insurance terms to numbers. Return them as strings exa
           },
         ],
         config: {
-          temperature: 0.0,        // Maximum determinism
-          topP: 0.1,               // Narrow sampling
-          topK: 1,                 // Single best token
-          seed: 12345,             // Fixed seed for reproducibility
+          ...RELAXED_CONSISTENCY_CONFIG,
+          systemInstruction: DAMAGE_ANALYSIS_SYSTEM_INSTRUCTION,
           maxOutputTokens: 16384,
           responseMIMEType: "application/json",
           safetySettings: GEMINI_SAFETY_SETTINGS,
@@ -682,6 +723,19 @@ IMPORTANT: Do NOT convert insurance terms to numbers. Return them as strings exa
         throw new Error('Response JSON is incomplete or malformed');
       }
 
+      // Check for no-vehicle indicators before parsing
+      const lowerText = cleanedText.toLowerCase();
+      const noVehicleIndicators = [
+        'no vehicle', 'cannot detect', 'unable to identify',
+        'no car', 'no automobile', 'does not contain a vehicle',
+        'no visible vehicle', 'cannot identify a vehicle',
+        'unable to detect', 'no damaged vehicle',
+      ];
+      const isNotJsonResponse = !cleanedText.startsWith('{') && !cleanedText.startsWith('[');
+      if (isNotJsonResponse && noVehicleIndicators.some(i => lowerText.includes(i))) {
+        throw new Error('NO_VEHICLE_DETECTED');
+      }
+
       let analysis: EnhancedAutoDamageAnalysis;
       try {
         analysis = JSON.parse(cleanedText);
@@ -692,7 +746,22 @@ IMPORTANT: Do NOT convert insurance terms to numbers. Return them as strings exa
         console.error('  - Finish reason:', response.finishReason);
         console.error('  - First 500 chars:', cleanedText.substring(0, 500));
         console.error('  - Last 500 chars:', cleanedText.substring(Math.max(0, cleanedText.length - 500)));
+        if (noVehicleIndicators.some(i => lowerText.includes(i))) {
+          throw new Error('NO_VEHICLE_DETECTED');
+        }
         throw new Error('Failed to parse AI response');
+      }
+
+      if (analysis.vehiclePresent === false) {
+        throw new Error('NO_VEHICLE_DETECTED');
+      }
+      if (!analysis.damagedParts || analysis.damagedParts.length === 0) {
+        throw new Error('NO_DAMAGE_DETECTED');
+      }
+
+      // Check for invalid policy document
+      if (analysis.policyValidation && !analysis.policyValidation.isValidAutoPolicy) {
+        throw new Error('INVALID_POLICY_DOCUMENT');
       }
 
       return {
@@ -702,7 +771,7 @@ IMPORTANT: Do NOT convert insurance terms to numbers. Return them as strings exa
     };
 
     // Execute with automatic fallback
-    const result = await retryWithFallback(apiCall, 13000);
+    const result = await retryWithFallback(apiCall, 13000, new Set([GEMINI_MODELS.FLASH_LITE]));
 
     if (!result.success) {
       // All models failed

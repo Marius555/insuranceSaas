@@ -17,7 +17,7 @@ const nextConfig: NextConfig = {
   ],
   experimental: {
     staleTimes: {
-      dynamic: 30, // cache dynamic RSC payloads client-side for 30 seconds
+      dynamic: 0, // always fetch fresh RSC payloads on navigation
     },
     serverActions: {
       bodySizeLimit: '30mb', // Allow up to 30MB for video uploads (20MB file → ~27MB base64)
