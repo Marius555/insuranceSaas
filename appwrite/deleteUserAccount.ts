@@ -5,17 +5,45 @@ import { adminAction, clientAction } from "./adminOrClient"
 import { isAppwriteClient } from "@/lib/types/appwrite"
 import { DATABASE_ID, COLLECTION_IDS } from "@/lib/env"
 import { cookies } from "next/headers"
+import { decryptData } from "@/utils/decrypt"
+
+async function getUserIdFromSession(): Promise<string | null> {
+  // Primary: Appwrite session cookie
+  const sessionClient = await clientAction()
+  if (isAppwriteClient(sessionClient)) {
+    try {
+      const user = await sessionClient.account.get()
+      return user.$id
+    } catch {
+      // fall through to JWT fallback
+    }
+  }
+
+  // Fallback: localSession JWT (same pattern as getSessionCached)
+  const cookieStore = await cookies()
+  const localSession = cookieStore.get("localSession")
+  if (!localSession?.value) return null
+
+  try {
+    let payload
+    try {
+      payload = await decryptData(decodeURIComponent(localSession.value), true)
+    } catch {
+      payload = await decryptData(localSession.value, true)
+    }
+    return (payload?.userId as string) ?? null
+  } catch {
+    return null
+  }
+}
 
 export async function deleteUserAccount(): Promise<{ success: boolean; message: string }> {
   try {
     // Get the current user's ID from their session
-    const sessionClient = await clientAction()
-    if (!isAppwriteClient(sessionClient)) {
+    const userId = await getUserIdFromSession()
+    if (!userId) {
       return { success: false, message: "Not authenticated" }
     }
-
-    const currentUser = await sessionClient.account.get()
-    const userId = currentUser.$id
 
     // Use admin client for deletions
     const { databases } = await adminAction()

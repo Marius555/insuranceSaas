@@ -53,8 +53,9 @@ export function GuidedCaptureOverlay({
   stepPhotoCount,
 }: GuidedCaptureOverlayProps) {
   const [showFlash, setShowFlash] = useState(false);
+  const [isAdvancing, setIsAdvancing] = useState(false);
 
-  const currentStep = GUIDED_CAPTURE_STEPS[currentStepIndex];
+  const currentStep = GUIDED_CAPTURE_STEPS[currentStepIndex] ?? GUIDED_CAPTURE_STEPS[GUIDED_CAPTURE_STEPS.length - 1];
   const isLastStep = currentStepIndex === GUIDED_CAPTURE_STEPS.length - 1;
   const lastStepDone = isLastStep && stepPhotoCount > 0;
 
@@ -64,8 +65,10 @@ export function GuidedCaptureOverlay({
     const ok = await onCapture();
     // Auto-advance for non-last steps; last step shows "Done" button instead
     if (ok && !isLastStep) {
+      setIsAdvancing(true);
       setTimeout(() => {
         onAutoAdvance();
+        setIsAdvancing(false);
       }, 500);
     }
   }, [onCapture, isLastStep, onAutoAdvance]);
@@ -145,10 +148,10 @@ export function GuidedCaptureOverlay({
             ) : (
               <button
                 onClick={handleCapture}
-                disabled={isCapturing}
+                disabled={isCapturing || isAdvancing}
                 className={cn(
                   "w-16 h-16 rounded-full border-4 border-white flex items-center justify-center transition-all",
-                  isCapturing
+                  isCapturing || isAdvancing
                     ? "opacity-50"
                     : "hover:scale-105 active:scale-95"
                 )}
@@ -156,7 +159,7 @@ export function GuidedCaptureOverlay({
                 <div
                   className={cn(
                     "w-12 h-12 rounded-full transition-colors",
-                    isCapturing ? "bg-white/50" : "bg-white"
+                    isCapturing || isAdvancing ? "bg-white/50" : "bg-white"
                   )}
                 />
               </button>

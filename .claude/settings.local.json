@@ -50,7 +50,9 @@
       "WebFetch(domain:www.ravin.ai)",
       "WebFetch(domain:inspektlabs.com)",
       "Bash(python3 -c \" import sys, json for line in sys.stdin: try: obj = json.loads\\(line.strip\\(\\)\\) if obj.get\\(''type''\\) == ''assistant'': msg = obj.get\\(''message'', {}\\) if isinstance\\(msg, dict\\): content = msg.get\\(''content'', ''''\\) if isinstance\\(content, list\\): for c in content: if isinstance\\(c, dict\\) and c.get\\(''type''\\) == ''text'': print\\(c[''text''][:2000]\\) elif isinstance\\(content, str\\): print\\(content[:2000]\\) except: pass \")",
-      "Bash(python3:*)"
+      "Bash(python3:*)",
+      "Bash(find:*)",
+      "Bash(grep:*)"
     ]
   }
 }

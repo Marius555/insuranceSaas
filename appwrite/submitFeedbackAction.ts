@@ -1,8 +1,8 @@
 "use server";
 
+import { cookies } from 'next/headers';
+import { decryptData } from '@/utils/decrypt';
 import { createFeedback, CreateFeedbackResult } from '@/appwrite/createFeedback';
-import { clientAction } from '@/appwrite/adminOrClient';
-import { isAppwriteClient } from '@/lib/types/appwrite';
 
 export interface SubmitFeedbackInput {
   report_id?: string;
@@ -11,28 +11,36 @@ export interface SubmitFeedbackInput {
   feedback_text: string;
 }
 
-/**
- * Submit feedback from form data
- * Gets the current user session and creates feedback document
- *
- * @param input - Feedback form data
- * @returns Result indicating success or failure
- */
 export async function submitFeedbackAction(input: SubmitFeedbackInput): Promise<CreateFeedbackResult> {
   try {
-    // Get current user session
-    const result = await clientAction();
+    // Get user ID from localSession JWT (same source as dashboard auth)
+    const cookieStore = await cookies();
+    const localSession = cookieStore.get('localSession');
 
-    if (!isAppwriteClient(result)) {
+    if (!localSession?.value) {
       return { success: false, message: 'You must be logged in to submit feedback' };
     }
 
-    // Get user ID from account
-    const user = await result.account.get();
+    let userId: string | undefined;
+    try {
+      const decodedJwt = decodeURIComponent(localSession.value);
+      const payload = await decryptData(decodedJwt, true);
+      userId = payload.userId as string;
+    } catch {
+      try {
+        const payload = await decryptData(localSession.value, true);
+        userId = payload.userId as string;
+      } catch {
+        return { success: false, message: 'You must be logged in to submit feedback' };
+      }
+    }
 
-    // Create feedback document
+    if (!userId) {
+      return { success: false, message: 'You must be logged in to submit feedback' };
+    }
+
     return await createFeedback({
-      user_id: user.$id,
+      user_id: userId,
       ...(input.report_id ? { report_id: input.report_id } : {}),
       category: input.category,
       rating: input.rating,

@@ -74,7 +74,7 @@ export function RecordingControls({
           variant="ghost"
           onClick={onCancel}
           className="px-6"
-          disabled={(isRecording && !isPaused) || isStopProcessing}
+          disabled={isStopProcessing}
         >
           Cancel
         </Button>

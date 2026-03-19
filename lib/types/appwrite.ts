@@ -23,6 +23,8 @@ export interface UserDocument extends Models.Document {
   pricing_plan?: 'free' | 'pro' | 'max';
   evaluation_times?: number;
   evaluation_reset_date?: string;
+  stripe_customer_id?: string;
+  stripe_subscription_id?: string;
 }
 
 // Insurance Companies Collection
@@ -142,7 +144,7 @@ export interface ReportDocument extends Models.Document {
 export interface ReportDamageDetailDocument extends Models.Document {
   claim_id: string;
   part_name: string;
-  severity: 'minor' | 'moderate' | 'severe'; // Database enum constraint (schema/database.schema.json:352)
+  severity: 'minor' | 'moderate' | 'severe' | 'total_loss'; // Database enum constraint (schema/database.schema.json:421)
   description: string;
   estimated_repair_cost?: string; // e.g., "$500 - $800"
   repair_or_replace?: 'repair' | 'replace' | 'either' | 'undetermined';

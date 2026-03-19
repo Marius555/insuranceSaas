@@ -739,17 +739,23 @@ Include ALL visible damage in damagedParts, no matter how minor. This is the mir
       let analysis: EnhancedAutoDamageAnalysis;
       try {
         analysis = JSON.parse(cleanedText);
-      } catch (parseError) {
-        console.error('❌ JSON Parse Error:');
-        console.error('  - Error:', parseError instanceof Error ? parseError.message : 'Unknown');
-        console.error('  - Response length:', cleanedText.length);
-        console.error('  - Finish reason:', response.finishReason);
-        console.error('  - First 500 chars:', cleanedText.substring(0, 500));
-        console.error('  - Last 500 chars:', cleanedText.substring(Math.max(0, cleanedText.length - 500)));
-        if (noVehicleIndicators.some(i => lowerText.includes(i))) {
-          throw new Error('NO_VEHICLE_DETECTED');
+      } catch {
+        try {
+          const { jsonrepair } = await import('jsonrepair');
+          analysis = JSON.parse(jsonrepair(cleanedText));
+          console.warn('⚠️ JSON repaired successfully — Gemini returned malformed JSON');
+        } catch (repairError) {
+          console.error('❌ JSON Parse Error:');
+          console.error('  - Error:', repairError instanceof Error ? repairError.message : 'Unknown');
+          console.error('  - Response length:', cleanedText.length);
+          console.error('  - Finish reason:', response.finishReason);
+          console.error('  - First 500 chars:', cleanedText.substring(0, 500));
+          console.error('  - Last 500 chars:', cleanedText.substring(Math.max(0, cleanedText.length - 500)));
+          if (noVehicleIndicators.some(i => lowerText.includes(i))) {
+            throw new Error('NO_VEHICLE_DETECTED');
+          }
+          throw new Error('Failed to parse AI response');
         }
-        throw new Error('Failed to parse AI response');
       }
 
       if (analysis.vehiclePresent === false) {

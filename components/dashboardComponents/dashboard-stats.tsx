@@ -60,7 +60,7 @@ export function DashboardStats({ reports }: DashboardStatsProps) {
         value={
           <CurrencyAmount
             amount={stats.totalCost}
-            className="text-2xl font-bold"
+            className="text-xl sm:text-2xl font-bold"
           />
         }
         icon={CreditCardIcon}
@@ -103,7 +103,7 @@ function StatCard({
   return (
     <div className="rounded-lg border bg-card p-4">
       <div className="flex items-start justify-between mb-2">
-        <div className="text-2xl font-bold text-foreground">{value}</div>
+        <div className="min-w-0 flex-1 mr-2 text-2xl font-bold text-foreground break-words leading-tight">{value}</div>
         {icon && (
           <div className="size-8 rounded-md bg-primary/10 flex items-center justify-center text-primary shrink-0">
             <HugeiconsIcon icon={icon} className="size-4" />

@@ -41,15 +41,20 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    // Create admin client with API key
-    const client = new Client()
+    // Public client (no API key) — required by Appwrite's token-exchange endpoint
+    const sessionClient = new Client()
+      .setEndpoint(process.env.NEXT_PUBLIC_APPWRITE_ENDPOINT!)
+      .setProject(process.env.NEXT_PUBLIC_APPWRITE_PROJECT_ID!);
+
+    // Admin client (with API key) — for users.get and getUserDocument
+    const adminClient = new Client()
       .setEndpoint(process.env.NEXT_PUBLIC_APPWRITE_ENDPOINT!)
       .setProject(process.env.NEXT_PUBLIC_APPWRITE_PROJECT_ID!)
       .setKey(process.env.APPWRITE_API_KEY!);
 
     // Create service instances
-    const account = new Account(client);
-    const users = new Users(client);
+    const account = new Account(sessionClient);   // createSession — no API key
+    const users = new Users(adminClient);          // users.get — admin
 
     // Create session using the OAuth userId and secret
     const session = await account.createSession(userId, secret);
@@ -92,7 +97,7 @@ export async function GET(request: NextRequest) {
       const error = searchParams.get('error');
       const payload = error
         ? { type: 'oauth-error', error }
-        : { type: 'oauth-success', userId, name: user.name, email: user.email };
+        : { type: 'oauth-success', userId, name: user.name, email: user.email, onboardingCompleted: !!(userDoc?.onboarding_completed) };
 
       return new NextResponse(
         `<!DOCTYPE html><html class="${darkClass}"><head>${popupStyle}</head><body>
@@ -116,10 +121,12 @@ export async function GET(request: NextRequest) {
     // Clear the pending_plan cookie
     cookieStore.set("pending_plan", "", { path: "/", maxAge: 0 });
 
-    // Redirect to buy_plan if a plan was selected, otherwise go to landing page
+    // Redirect to buy_plan, dashboard (existing users), or landing page (new users)
     const destination = pendingPlan
       ? `${redirectUrl}/auth/dashboard/${userId}/buy_plan?plan=${pendingPlan}`
-      : `${redirectUrl}/`;
+      : userDoc?.onboarding_completed
+        ? `${redirectUrl}/auth/dashboard/${userId}`
+        : `${redirectUrl}/`;
 
     // Force a full page reload to ensure cookies are read properly
     // Using HTML redirect instead of NextResponse.redirect to prevent client-side navigation

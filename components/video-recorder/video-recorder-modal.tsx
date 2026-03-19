@@ -26,9 +26,11 @@ import { useMotionDetection } from "@/hooks/use-motion-detection";
 import { useMounted } from "@/hooks/use-mounted";
 import { RecordingControls } from "./recording-controls";
 import { RecordingPreview } from "./recording-preview";
-import { PolicyUploadStep, type PolicySubmission } from "./policy-upload-step";
+import { type PolicySubmission } from "./policy-upload-step";
 import { SpeedAlert } from "./speed-alert";
 import { GuidedCaptureOverlay, GUIDED_CAPTURE_STEPS } from "./guided-capture-overlay";
+import { PhotoOnlyCaptureOverlay } from "./photo-only-capture-overlay";
+import { PhotoOnlyPreview } from "./photo-only-preview";
 import { ProgressIndicator } from "@/components/gemini-analysis/progress-indicator";
 import { usePhotoCapture } from "@/hooks/use-photo-capture";
 import {
@@ -36,7 +38,7 @@ import {
   needsCompression,
 } from "@/lib/utils/video-compression";
 import { submitReportAction } from "@/appwrite/submitReportAction";
-import { Camera02Icon, CameraOff02Icon } from "@hugeicons/core-free-icons";
+import { Camera02Icon, CameraOff02Icon, Cancel01Icon } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { getCountryFromTimezone } from "@/lib/utils/country-detection";
 import { useUser } from "@/lib/context/user-context";
@@ -51,10 +53,9 @@ type ModalState =
   | "processing" // After stop, before preview - bridges the async gap
   | "compressing"
   | "preview"
-  | "policy-step"
   | "uploading";
 
-type CaptureMode = "guided" | "free";
+type CaptureMode = "guided" | "free" | "photo-only";
 
 interface VideoRecorderModalProps {
   children: React.ReactNode;
@@ -87,6 +88,8 @@ export function VideoRecorderModal({
   const [guidedPhase, setGuidedPhase] = useState<'photos' | 'video'>('photos');
   const [guidedStepIndex, setGuidedStepIndex] = useState(0);
   const [guidedStepPhotoCount, setGuidedStepPhotoCount] = useState(0);
+  const [photoOnlyPhase, setPhotoOnlyPhase] = useState<'damage' | 'sides'>('damage');
+  const [photoOnlyDamageCount, setPhotoOnlyDamageCount] = useState(0);
 
   // Track last duration for quality seconds calculation
   const lastDurationRef = useRef(0);
@@ -113,6 +116,7 @@ export function VideoRecorderModal({
     photos: capturedPhotos,
     capturePhoto,
     clearPhotos,
+    removePhoto,
     isCapturing: isPhotoCaptureInProgress,
   } = usePhotoCapture();
 
@@ -158,7 +162,13 @@ export function VideoRecorderModal({
       if (permissionState === "denied") {
         setModalState("permission-denied");
       } else if (permissionState === "granted" && stream) {
-        setModalState("mode-select");
+        setModalState((current) => {
+          // Only advance to mode-select from early/blocked states
+          if (current === "permission-prompt" || current === "permission-denied") {
+            return "mode-select";
+          }
+          return current; // Don't override ready/recording/mode-select/etc.
+        });
       }
     });
   }, [permissionState, stream]);
@@ -226,8 +236,7 @@ export function VideoRecorderModal({
       modalState === "recording" ||
       modalState === "processing" ||
       modalState === "compressing" ||
-      modalState === "preview" ||
-      modalState === "policy-step";
+      modalState === "preview";
 
     const enableNoSleep = () => {
       if (!noSleepRef.current) {
@@ -267,52 +276,53 @@ export function VideoRecorderModal({
   }, [modalState]);
 
   // Check if modal is in an active state that shouldn't be interrupted
-  // Includes preview/policy-step because user has recorded video they want to keep
+  // Includes preview because user has recorded video they want to keep
   const isActiveState =
     modalState === "recording" ||
     modalState === "processing" ||
     modalState === "compressing" ||
     modalState === "preview" ||
-    modalState === "policy-step" ||
-    modalState === "uploading" ||
-    cameraLoading;
+    modalState === "uploading";
 
-  // Use ref to avoid stale closure in handleOpenChange
-  const isActiveStateRef = useRef(false);
   // Synchronous upload lock — prevents stale-closure double-submit and mid-upload navigation
   const isUploadingRef = useRef(false);
-  useEffect(() => {
-    isActiveStateRef.current = isActiveState;
-  }, [isActiveState]);
+  // Ref so onInteractOutside/onEscapeKeyDown can read current value without stale closure
+  const isActiveStateRef = useRef(false);
+  isActiveStateRef.current = isActiveState;
+
+  const closeModal = useCallback(() => {
+    isUploadingRef.current = false;
+    setOpen(false);
+    stopCamera();
+    resetRecording();
+    clearPhotos();
+    setModalState("permission-prompt");
+    setProcessedFile(null);
+    setWasCompressed(false);
+    setUploadStep(1);
+    setQualitySeconds(0);
+    setCaptureMode("free");
+    setGuidedPhase('photos');
+    setGuidedStepIndex(0);
+    setGuidedStepPhotoCount(0);
+    setPhotoOnlyPhase('damage');
+    setPhotoOnlyDamageCount(0);
+    lastDurationRef.current = 0;
+  }, [stopCamera, resetRecording, clearPhotos]);
 
   const handleOpenChange = useCallback(
     (isOpen: boolean) => {
-      // Prevent closing during recording, compressing, uploading, or camera loading
-      // Use ref to get current value and avoid stale closure
-      if (!isOpen && isActiveStateRef.current) {
+      // Prevent closing during recording, compressing, uploading
+      if (!isOpen && isActiveState) {
         return;
       }
-
-      setOpen(isOpen);
-      if (!isOpen) {
-        // Cleanup on close
-        isUploadingRef.current = false;
-        stopCamera();
-        resetRecording();
-        clearPhotos();
-        setModalState("permission-prompt");
-        setProcessedFile(null);
-        setWasCompressed(false);
-        setUploadStep(1);
-        setQualitySeconds(0);
-        setCaptureMode("free");
-        setGuidedPhase('photos');
-        setGuidedStepIndex(0);
-        setGuidedStepPhotoCount(0);
-        lastDurationRef.current = 0;
+      if (isOpen) {
+        setOpen(true);
+      } else {
+        closeModal();
       }
     },
-    [stopCamera, resetRecording, clearPhotos]
+    [isActiveState, closeModal]
   );
 
   const handleRequestPermission = async () => {
@@ -333,6 +343,13 @@ export function VideoRecorderModal({
       clearPhotos();
       await requestMotionPermission();
       setGuidedPhase('photos');
+      setModalState("recording");
+    } else if (mode === "photo-only") {
+      clearPhotos();
+      setGuidedStepIndex(0);
+      setGuidedStepPhotoCount(0);
+      setPhotoOnlyPhase('damage');
+      setPhotoOnlyDamageCount(0);
       setModalState("recording");
     } else {
       setModalState("ready");
@@ -370,7 +387,7 @@ export function VideoRecorderModal({
 
   // Guided mode: advance to next step
   const handleGuidedNextStep = useCallback(() => {
-    setGuidedStepIndex((prev) => prev + 1);
+    setGuidedStepIndex((prev) => Math.min(prev + 1, GUIDED_CAPTURE_STEPS.length - 1));
     setGuidedStepPhotoCount(0);
   }, []);
 
@@ -379,6 +396,145 @@ export function VideoRecorderModal({
     setGuidedPhase('video');
     // Don't start recording — user will click start button
   }, []);
+
+  // Photo-only: advance to next step (sides phase)
+  const handlePhotoOnlyNextStep = useCallback(() => {
+    setGuidedStepIndex((prev) => Math.min(prev + 1, GUIDED_CAPTURE_STEPS.length - 1));
+    setGuidedStepPhotoCount(0);
+  }, []);
+
+  // Photo-only: transition from damage phase to sides phase
+  const handlePhotoOnlyNextPhase = useCallback(() => {
+    setPhotoOnlyDamageCount(capturedPhotos.length);
+    setPhotoOnlyPhase('sides');
+    setGuidedStepIndex(0);
+    setGuidedStepPhotoCount(0);
+  }, [capturedPhotos.length]);
+
+  // Photo-only: user done capturing → stop camera → go to preview
+  const handlePhotoOnlyFinish = useCallback(() => {
+    stopCamera();
+    setModalState("preview");
+  }, [stopCamera]);
+
+  // Photo-only: capture photo with correct phase/step label
+  const handlePhotoOnlyCapture = useCallback(async (): Promise<boolean> => {
+    if (!stream) return false;
+    const label = photoOnlyPhase === 'damage'
+      ? "Damage Area"
+      : (guidedStepIndex < GUIDED_CAPTURE_STEPS.length
+          ? GUIDED_CAPTURE_STEPS[guidedStepIndex].label
+          : "Extra");
+    const ok = await capturePhoto(stream, label);
+    if (ok) setGuidedStepPhotoCount((prev) => prev + 1);
+    return ok;
+  }, [stream, photoOnlyPhase, guidedStepIndex, capturePhoto]);
+
+  // Photo-only: submit without policy
+  const handleSubmitPhotoOnly = async () => {
+    if (isUploadingRef.current) return;
+    isUploadingRef.current = true;
+    if (capturedPhotos.length === 0) {
+      isUploadingRef.current = false;
+      return;
+    }
+    if (limitReached) {
+      toast.warning("Daily evaluation limit reached. Upgrade your plan for more evaluations.");
+      isUploadingRef.current = false;
+      return;
+    }
+
+    setModalState("uploading");
+    setUploadStep(1);
+
+    try {
+      const formData = new FormData();
+      for (const photo of capturedPhotos) {
+        formData.append("mediaFiles", photo.file);
+      }
+      const userCountry = getCountryFromTimezone();
+      formData.append('userCountry', userCountry);
+
+      setUploadStep(2);
+      await new Promise((r) => setTimeout(r, 500));
+      setUploadStep(3);
+      await new Promise((r) => setTimeout(r, 300));
+      setUploadStep(4);
+
+      const result = await submitReportAction(formData);
+
+      if (result.success && result.reportId) {
+        setUploadStep(5);
+        await new Promise((r) => setTimeout(r, 300));
+        setUploadStep(6);
+        await new Promise((r) => setTimeout(r, 500));
+        onSuccess?.(result.reportId);
+        router.replace(`/auth/reports/${result.reportId}`);
+      } else {
+        toast.error(result.message || "Failed to submit report");
+        setModalState("preview");
+        isUploadingRef.current = false;
+      }
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Submission failed");
+      setModalState("preview");
+      isUploadingRef.current = false;
+    }
+  };
+
+  // Photo-only: submit with policy
+  const handleSubmitPhotoOnlyWithPolicy = async (policySubmission: PolicySubmission) => {
+    if (isUploadingRef.current) return;
+    isUploadingRef.current = true;
+    if (capturedPhotos.length === 0) {
+      isUploadingRef.current = false;
+      return;
+    }
+
+    setModalState("uploading");
+    setUploadStep(1);
+
+    try {
+      const formData = new FormData();
+      for (const photo of capturedPhotos) {
+        formData.append("mediaFiles", photo.file);
+      }
+
+      if (policySubmission.type === 'file') {
+        formData.append("policyFile", policySubmission.file);
+      } else {
+        formData.append("existingPolicyFileId", policySubmission.policy.fileId);
+      }
+
+      const userCountry = getCountryFromTimezone();
+      formData.append('userCountry', userCountry);
+
+      setUploadStep(2);
+      await new Promise((r) => setTimeout(r, 500));
+      setUploadStep(3);
+      await new Promise((r) => setTimeout(r, 300));
+      setUploadStep(4);
+
+      const result = await submitReportAction(formData);
+
+      if (result.success && result.reportId) {
+        setUploadStep(5);
+        await new Promise((r) => setTimeout(r, 300));
+        setUploadStep(6);
+        await new Promise((r) => setTimeout(r, 500));
+        onSuccess?.(result.reportId);
+        router.replace(`/auth/reports/${result.reportId}`);
+      } else {
+        toast.error(result.message || "Failed to submit report");
+        setModalState("preview");
+        isUploadingRef.current = false;
+      }
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Submission failed");
+      setModalState("preview");
+      isUploadingRef.current = false;
+    }
+  };
 
   const handleStopRecording = () => {
     stopRecording();
@@ -394,7 +550,29 @@ export function VideoRecorderModal({
   };
 
   const handleCancel = () => {
-    if (modalState === "preview" || modalState === "policy-step") {
+    if (isRecording) {
+      // Cancel during active recording — stop, discard, return to mode-select
+      setModalState("mode-select"); // block the stop→processing effect first
+      stopRecording();
+      resetRecording();
+      clearPhotos();
+      setQualitySeconds(0);
+      setGuidedPhase('photos');
+      setGuidedStepIndex(0);
+      setGuidedStepPhotoCount(0);
+      setPhotoOnlyPhase('damage');
+      setPhotoOnlyDamageCount(0);
+      lastDurationRef.current = 0;
+    } else if (modalState === "preview" && captureMode === "photo-only") {
+      // Photo-only preview cancel — clear photos, restart camera, go back to mode-select
+      clearPhotos();
+      setGuidedStepIndex(0);
+      setGuidedStepPhotoCount(0);
+      setPhotoOnlyPhase('damage');
+      setPhotoOnlyDamageCount(0);
+      requestPermission();
+      setModalState("mode-select");
+    } else if (modalState === "preview") {
       // Go back to mode select state
       resetRecording();
       clearPhotos();
@@ -405,10 +583,23 @@ export function VideoRecorderModal({
       setGuidedStepIndex(0);
       setGuidedStepPhotoCount(0);
       lastDurationRef.current = 0;
+      requestPermission(); // restart camera — stopCamera() was called in processRecordedVideo
+      setModalState("mode-select");
+    } else if (modalState === "recording" && !isRecording) {
+      // Guided/photo-only photo phase cancel — discard captured photos, go back to mode-select
+      resetRecording();
+      clearPhotos();
+      setQualitySeconds(0);
+      setGuidedPhase('photos');
+      setGuidedStepIndex(0);
+      setGuidedStepPhotoCount(0);
+      setPhotoOnlyPhase('damage');
+      setPhotoOnlyDamageCount(0);
+      lastDurationRef.current = 0;
       setModalState("mode-select");
     } else {
-      // Close modal
-      handleOpenChange(false);
+      // Close modal — bypass isActiveState guard (user explicitly clicked Cancel)
+      closeModal();
     }
   };
 
@@ -515,15 +706,6 @@ export function VideoRecorderModal({
     }
   };
 
-  const handleGoToPolicyStep = () => {
-    if (isUploadingRef.current) return;
-    if (limitReached) {
-      toast.warning("Daily evaluation limit reached. Upgrade your plan for more evaluations.");
-      return;
-    }
-    setModalState("policy-step");
-  };
-
   const handleSubmitWithPolicy = async (policySubmission: PolicySubmission) => {
     if (isUploadingRef.current) return;
     isUploadingRef.current = true;
@@ -621,20 +803,15 @@ export function VideoRecorderModal({
       } else {
         console.error('[VideoRecorder] Submission failed:', result.message);
         toast.error(result.message || "Failed to submit report");
-        setModalState("policy-step");
+        setModalState("preview");
         isUploadingRef.current = false;
       }
     } catch (err) {
       console.error('[VideoRecorder] Submission error:', err);
       toast.error(err instanceof Error ? err.message : "Submission failed");
-      setModalState("policy-step");
+      setModalState("preview");
       isUploadingRef.current = false;
     }
-  };
-
-  const handleBackFromPolicy = () => {
-    if (isUploadingRef.current) return;
-    setModalState("preview");
   };
 
   const displayError = cameraError || recorderError;
@@ -646,11 +823,12 @@ export function VideoRecorderModal({
     if (modalState === "mode-select") return "Choose Capture Mode";
     if (modalState === "ready") return "Record Video";
     if (modalState === "recording" && captureMode === "guided" && guidedPhase === 'photos') return "Capture Photos";
+    if (modalState === "recording" && captureMode === "photo-only") return "Capture Photos";
+    if (modalState === "preview" && captureMode === "photo-only") return "Review Photos";
     if (modalState === "recording") return "Record Video";
     if (modalState === "processing") return "Processing...";
     if (modalState === "compressing") return "Processing Video";
     if (modalState === "preview") return "Preview Recording";
-    if (modalState === "policy-step") return "Add Insurance Policy";
     if (modalState === "uploading") return "Submitting Report";
     return "Camera";
   };
@@ -734,16 +912,34 @@ export function VideoRecorderModal({
                   onClick={() => handleSelectMode("guided")}
                   className="flex flex-col gap-1 p-4 rounded-xl border-2 border-border hover:border-primary text-left transition-colors"
                 >
-                  <span className="text-sm font-semibold text-foreground">Guided Mode</span>
+                  <div className="flex items-center justify-between w-full">
+                    <span className="text-sm font-semibold text-foreground">Film with Pictures</span>
+                    <span className="text-xs font-semibold text-primary">Most Accurate</span>
+                  </div>
                   <span className="text-xs text-muted-foreground">
-                    Step-by-step capture with photos and video. Best for thorough documentation.
+                    Step-by-step capture with photos and video.
+                  </span>
+                </button>
+                <button
+                  onClick={() => handleSelectMode("photo-only")}
+                  className="flex flex-col gap-1 p-4 rounded-xl border-2 border-border hover:border-primary text-left transition-colors"
+                >
+                  <div className="flex items-center justify-between w-full">
+                    <span className="text-sm font-semibold text-foreground">Take Pictures Only</span>
+                    <span className="text-xs font-semibold text-primary">Fastest</span>
+                  </div>
+                  <span className="text-xs text-muted-foreground">
+                    Photos only, no video required. Up to 10 photos.
                   </span>
                 </button>
                 <button
                   onClick={() => handleSelectMode("free")}
                   className="flex flex-col gap-1 p-4 rounded-xl border-2 border-border hover:border-primary text-left transition-colors"
                 >
-                  <span className="text-sm font-semibold text-foreground">Free Mode</span>
+                  <div className="flex items-center justify-between w-full">
+                    <span className="text-sm font-semibold text-foreground">Film Only</span>
+                    <span className="text-xs font-semibold text-primary">Most Popular</span>
+                  </div>
                   <span className="text-xs text-muted-foreground">
                     Record freely. Best for quick assessments.
                   </span>
@@ -790,6 +986,30 @@ export function VideoRecorderModal({
                   />
                 )}
 
+                {/* Photo-only capture overlay */}
+                {captureMode === "photo-only" && modalState === "recording" && (() => {
+                  const photoOnlySidesCount = capturedPhotos.length - photoOnlyDamageCount;
+                  const currentPhasePhotos = photoOnlyPhase === 'damage'
+                    ? capturedPhotos.length
+                    : photoOnlySidesCount;
+                  return (
+                    <PhotoOnlyCaptureOverlay
+                      phase={photoOnlyPhase}
+                      currentStepIndex={guidedStepIndex}
+                      phasePhotos={currentPhasePhotos}
+                      phaseMaxPhotos={photoOnlyPhase === 'damage' ? 10 : 5}
+                      isCapturing={isPhotoCaptureInProgress}
+                      onCapture={handlePhotoOnlyCapture}
+                      onSkip={handlePhotoOnlyFinish}
+                      onNext={photoOnlyPhase === 'damage' ? handlePhotoOnlyNextPhase : handlePhotoOnlyNextStep}
+                      onFinish={handlePhotoOnlyFinish}
+                      onCancel={handleCancel}
+                      lastThumbnailUrl={capturedPhotos.length > 0 ? capturedPhotos[capturedPhotos.length - 1].thumbnailUrl : undefined}
+                      stepPhotoCount={guidedStepPhotoCount}
+                    />
+                  );
+                })()}
+
                 {/* Guided video phase instruction overlay */}
                 {captureMode === "guided" && guidedPhase === 'video' && isRecording && !isPaused && (
                   <div className="absolute top-14 left-1/2 -translate-x-1/2 z-10">
@@ -803,7 +1023,7 @@ export function VideoRecorderModal({
               </div>
 
               {/* Controls — shown for free mode, guided video phase, or when not yet recording */}
-              {(captureMode === "free" || !isRecording || (captureMode === "guided" && guidedPhase === 'video')) && !(captureMode === "guided" && guidedPhase === 'photos' && modalState === "recording") && (
+              {captureMode !== "photo-only" && (captureMode === "free" || !isRecording || (captureMode === "guided" && guidedPhase === 'video')) && !(captureMode === "guided" && guidedPhase === 'photos' && modalState === "recording") && (
                 <RecordingControls
                   isRecording={isRecording}
                   isPaused={isPaused}
@@ -845,8 +1065,18 @@ export function VideoRecorderModal({
             </div>
           )}
 
-          {/* Preview */}
-          {modalState === "preview" && processedFile && recordedUrl && (
+          {/* Preview — Photo-only mode */}
+          {modalState === "preview" && captureMode === "photo-only" && (
+            <PhotoOnlyPreview
+              capturedPhotos={capturedPhotos}
+              onSubmitQuick={handleSubmitPhotoOnly}
+              onSubmitWithPolicy={handleSubmitPhotoOnlyWithPolicy}
+              onRemovePhoto={removePhoto}
+            />
+          )}
+
+          {/* Preview — Video modes */}
+          {modalState === "preview" && captureMode !== "photo-only" && processedFile && recordedUrl && (
             <>
               {displayError && (
                 <div className="mb-4 p-3 bg-destructive/10 text-destructive text-sm rounded-lg">
@@ -858,25 +1088,11 @@ export function VideoRecorderModal({
                 videoUrl={recordedUrl}
                 duration={duration}
                 onSubmitQuick={handleSubmitQuick}
-                onSubmitWithPolicy={handleGoToPolicyStep}
-                onCancel={handleCancel}
+                onSubmitWithPolicy={handleSubmitWithPolicy}
                 wasCompressed={wasCompressed}
-              />
-            </>
-          )}
-
-          {/* Policy Upload Step */}
-          {modalState === "policy-step" && processedFile && (
-            <>
-              {displayError && (
-                <div className="mb-4 p-3 bg-destructive/10 text-destructive text-sm rounded-lg">
-                  {displayError}
-                </div>
-              )}
-              <PolicyUploadStep
-                videoFile={processedFile}
-                onSubmit={handleSubmitWithPolicy}
-                onBack={handleBackFromPolicy}
+                captureMode={captureMode}
+                capturedPhotos={capturedPhotos}
+                onRemovePhoto={removePhoto}
               />
             </>
           )}
@@ -908,7 +1124,7 @@ export function VideoRecorderModal({
         <DrawerTrigger asChild>{children}</DrawerTrigger>
         <DrawerContent
           className="h-[90vh] flex flex-col p-0 gap-0"
-          showCloseButton={!isActiveState}
+          showCloseButton={!isActiveState && modalState !== "preview" && modalState !== "ready" && modalState !== "mode-select" && modalState !== "recording"}
           showHandle={!isActiveState}
           onInteractOutside={(e) => {
             if (isActiveStateRef.current) e.preventDefault();
@@ -921,7 +1137,14 @@ export function VideoRecorderModal({
           }}
         >
           <DrawerHeader className="px-6 py-4 border-b shrink-0">
-            <DrawerTitle>{getModalTitle()}</DrawerTitle>
+            <div className="flex items-center justify-between">
+              <DrawerTitle>{getModalTitle()}</DrawerTitle>
+              {(modalState === "preview" || modalState === "ready" || modalState === "mode-select" || modalState === "recording") && (
+                <Button variant="ghost" size="icon" className="-mr-2" onClick={handleCancel}>
+                  <HugeiconsIcon icon={Cancel01Icon} className="w-5 h-5" />
+                </Button>
+              )}
+            </div>
           </DrawerHeader>
           {modalBody}
         </DrawerContent>
@@ -935,7 +1158,7 @@ export function VideoRecorderModal({
       <DialogTrigger asChild>{children}</DialogTrigger>
       <DialogContent
         className="max-w-2xl h-[85vh] flex flex-col p-0 gap-0 *:data-[slot=dialog-close]:top-4.5"
-        showCloseButton={!isActiveState}
+        showCloseButton={!isActiveState && modalState !== "preview" && modalState !== "ready" && modalState !== "mode-select" && modalState !== "recording"}
         onInteractOutside={(e) => {
           if (isActiveStateRef.current) e.preventDefault();
         }}
@@ -946,9 +1169,15 @@ export function VideoRecorderModal({
           if (isActiveStateRef.current) e.preventDefault();
         }}
       >
-        <DialogHeader className="shrink-0">
-          <DialogTitle>{getModalTitle()}</DialogTitle>
-          
+        <DialogHeader className="shrink-0 px-6 py-4 border-b">
+          <div className="flex items-center justify-between">
+            <DialogTitle>{getModalTitle()}</DialogTitle>
+            {(modalState === "preview" || modalState === "ready" || modalState === "mode-select" || modalState === "recording") && (
+              <Button variant="ghost" size="icon" className="-mr-2" onClick={handleCancel}>
+                <HugeiconsIcon icon={Cancel01Icon} className="w-5 h-5" />
+              </Button>
+            )}
+          </div>
         </DialogHeader>
         {modalBody}
       </DialogContent>

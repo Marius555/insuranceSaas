@@ -73,9 +73,9 @@ export function ReportFeedbackButton({ reportId }: ReportFeedbackButtonProps) {
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogTrigger asChild>
-        <Button variant="outline" size="sm" className="p-4.5">
+        <Button variant="outline" size="sm" className="h-9 w-9 p-0">
           <HugeiconsIcon icon={SentIcon} size={16} />
-          Feedback
+          <span className="sr-only">Feedback</span>
         </Button>
       </DialogTrigger>
       <DialogContent className="sm:max-w-md">

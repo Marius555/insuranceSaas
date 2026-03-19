@@ -111,6 +111,20 @@
           "type": "string",
           "size": 10,
           "required": false
+        },
+        {
+          "key": "stripe_customer_id",
+          "type": "string",
+          "size": 64,
+          "required": false,
+          "default": null
+        },
+        {
+          "key": "stripe_subscription_id",
+          "type": "string",
+          "size": 64,
+          "required": false,
+          "default": null
         }
       ],
       "indexes": [
@@ -418,7 +432,7 @@
         {
           "key": "severity",
           "type": "enum",
-          "elements": ["minor", "moderate", "severe"],
+          "elements": ["minor", "moderate", "severe", "total_loss"],
           "required": true
         },
         {

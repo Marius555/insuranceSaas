@@ -24,7 +24,29 @@ import { useOAuthPopup } from "@/hooks/use-oauth-popup";
 import { checkUserStatus } from "@/app/api/auth/check-user/actions";
 import { completeOnboarding } from "@/app/api/auth/onboarding/actions";
 import { registerCompany } from "@/app/api/company/register/actions";
+import { createCheckoutSession } from "@/lib/stripe/createCheckoutSession";
 import type { OnboardingFlow } from "@/lib/utils/auth-redirect-storage";
+
+function consumePendingPlan(): string | null {
+  const match = document.cookie.match(/(?:^|;\s*)pending_plan=([^;]+)/);
+  if (match) {
+    document.cookie = 'pending_plan=;path=/;max-age=0';
+    return match[1];
+  }
+  return null;
+}
+
+async function redirectAfterAuth(userId: string, email: string) {
+  const plan = consumePendingPlan();
+  if (plan && (plan === 'pro' || plan === 'max')) {
+    const result = await createCheckoutSession(userId, plan, email);
+    if (result.success) {
+      window.location.href = result.url;
+      return;
+    }
+  }
+  window.location.href = `/auth/dashboard/${userId}`;
+}
 
 type ModalStep =
   | "sign-in"
@@ -74,22 +96,26 @@ export function GoogleSignInModal({
   const { resolvedTheme } = useTheme();
 
   const handleSuccess = useCallback(
-    async (data: { userId: string; name: string; email: string }) => {
+    async (data: { userId: string; name: string; email: string; onboardingCompleted: boolean }) => {
       setUserData(data);
       setError("");
 
+      // Fast path: JWT already confirmed onboarding is done — go straight to dashboard
+      if (data.onboardingCompleted) {
+        await redirectAfterAuth(data.userId, data.email);
+        return;
+      }
+
+      // Slow path: check DB for new users (onboardingCompleted === false)
       try {
         const status = await checkUserStatus(data.userId);
 
         if (status.exists && status.onboardingCompleted) {
-          // Existing user - redirect to dashboard
-          window.location.href = `/auth/dashboard/${data.userId}`;
+          await redirectAfterAuth(data.userId, data.email);
         } else {
-          // New user - show onboarding
           setStep("select-type");
         }
       } catch {
-        // If check fails, show onboarding as fallback
         setStep("select-type");
       }
     },
@@ -249,9 +275,9 @@ export function GoogleSignInModal({
     }
   };
 
-  const handleGoToDashboard = () => {
+  const handleGoToDashboard = async () => {
     if (!userData) return;
-    window.location.href = `/auth/dashboard/${userData.userId}`;
+    await redirectAfterAuth(userData.userId, userData.email);
   };
 
   // Determine if the dialog can be closed

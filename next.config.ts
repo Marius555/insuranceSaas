@@ -17,12 +17,12 @@ const nextConfig: NextConfig = {
   ],
   experimental: {
     staleTimes: {
-      dynamic: 0, // always fetch fresh RSC payloads on navigation
+      dynamic: 300, // cache RSC payloads for 5 minutes
     },
     serverActions: {
-      bodySizeLimit: '30mb', // Allow up to 30MB for video uploads (20MB file → ~27MB base64)
+      bodySizeLimit: '75mb', // Allow up to 75MB — covers 55MB video as base64 (~73MB)
     },
-    proxyClientMaxBodySize: '30mb', // Match server action limit for video uploads
+    proxyClientMaxBodySize: '75mb', // Match server action limit for video uploads
   },
 };
 

@@ -79,7 +79,7 @@ export async function analyzeVideo(
         config: {
           ...RELAXED_CONSISTENCY_CONFIG,
           systemInstruction: DAMAGE_ANALYSIS_SYSTEM_INSTRUCTION,
-          maxOutputTokens: 8192,
+          maxOutputTokens: 16384,
           ...(input.responseFormat === 'json' && {
             responseMIMEType: "application/json",
           }),
@@ -134,9 +134,15 @@ export async function analyzeVideo(
 
         try {
           analysis = JSON.parse(cleanedText);
-        } catch (parseError) {
-          console.error('Failed to parse JSON response:', cleanedText.substring(0, 200));
-          throw new Error(`Invalid JSON response from Gemini: ${parseError instanceof Error ? parseError.message : 'Unknown error'}`);
+        } catch {
+          try {
+            const { jsonrepair } = await import('jsonrepair');
+            analysis = JSON.parse(jsonrepair(cleanedText));
+            console.warn('⚠️ JSON repaired successfully — Gemini returned malformed JSON');
+          } catch (repairError) {
+            console.error('Failed to parse JSON response:', cleanedText.substring(0, 200));
+            throw new Error(`Invalid JSON response from Gemini: ${repairError instanceof Error ? repairError.message : 'Unknown error'}`);
+          }
         }
 
         // Validate using the structured vehiclePresent flag
@@ -158,7 +164,7 @@ export async function analyzeVideo(
     };
 
     // Execute with automatic fallback
-    const result = await retryWithFallback(apiCall, 4000);
+    const result = await retryWithFallback(apiCall, 4000, new Set([GEMINI_MODELS.FLASH_LITE]));
 
     if (!result.success) {
       // All models failed
@@ -435,7 +441,7 @@ Provide thorough analysis based on visible damage in the video.`;
     ...(isBase64 ? { videoBase64: videoPathOrBase64 } : { videoPath: videoPathOrBase64 }),
     mimeType,
     prompt,
-    model: GEMINI_MODELS.FLASH_LITE, // Fast and cost-effective
+    model: GEMINI_MODELS.FLASH,
     temperature: 0.2, // Very factual
     responseFormat: 'json',
     supplementaryImages,

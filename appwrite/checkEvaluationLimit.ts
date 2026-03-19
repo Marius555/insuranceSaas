@@ -59,8 +59,8 @@ export async function checkEvaluationLimit(userId: string): Promise<EvaluationCh
     return { allowed: true, remaining };
   } catch (error) {
     console.error('Failed to check evaluation limit:', error);
-    // Fail open to avoid blocking users due to internal errors
-    return { allowed: true, remaining: -1 };
+    // Fail closed — Gemini cost > user inconvenience
+    return { allowed: false, remaining: 0, message: 'Unable to verify your plan. Please try again in a moment.' };
   }
 }
 

@@ -60,7 +60,7 @@ export default async function ReportPage({ params }: ReportPageProps) {
   const isPublic = report.is_public;
 
   if (!isOwner && !isPublic) {
-    redirect('/?error=unauthorized');
+    redirect(`/auth/dashboard/${session.id}?error=unauthorized`);
   }
 
   // Fetch user document to check role for download permissions
@@ -127,7 +127,8 @@ export default async function ReportPage({ params }: ReportPageProps) {
 
   return (
     <SidebarInset>
-        <header className="flex h-16 shrink-0 items-center gap-2">
+        <header className="flex h-16 shrink-0 items-center">
+          {/* Left — breadcrumb */}
           <div className="flex items-center gap-2 px-4 flex-1">
             <SidebarTrigger className="-ml-1" />
             <Separator
@@ -148,13 +149,47 @@ export default async function ReportPage({ params }: ReportPageProps) {
                   </BreadcrumbLink>
                 </BreadcrumbItem>
                 <BreadcrumbSeparator className="hidden md:block" />
-                <BreadcrumbItem>
+                <BreadcrumbItem className="hidden sm:block">
                   <BreadcrumbPage>{report.claim_number}</BreadcrumbPage>
                 </BreadcrumbItem>
               </BreadcrumbList>
             </Breadcrumb>
           </div>
-          <div className="flex items-center gap-1 pr-4">
+          {/* Center — action buttons, mobile only */}
+          <div className="flex items-center gap-3 sm:hidden">
+            <ReportFeedbackButton reportId={report.$id} />
+            {canDownloadFiles && (
+              <>
+                {mediaFiles.map((file, index) => (
+                  <a key={file.fileId} href={file.downloadUrl} download title={`Download media ${index + 1}`}>
+                    <Button variant="outline" size="sm" className="h-9 w-9 p-0">
+                      <HugeiconsIcon icon={Image01Icon} size={16} />
+                      <span className="sr-only">Download media {index + 1}</span>
+                    </Button>
+                  </a>
+                ))}
+                {policyFile && (
+                  <a href={policyFile.downloadUrl} download title="Download policy">
+                    <Button variant="outline" size="sm" className="h-9 w-9 p-0">
+                      <HugeiconsIcon icon={File01Icon} size={16} />
+                      <span className="sr-only">Download policy</span>
+                    </Button>
+                  </a>
+                )}
+              </>
+            )}
+            <ReportActions
+              reportData={{
+                report: report as unknown as Record<string, unknown>,
+                damageDetails: allDamageDetails as unknown as Record<string, unknown>[],
+                vehicleVerification: vehicleVerification as unknown as Record<string, unknown> | null,
+                assessment: assessment as unknown as Record<string, unknown> | null,
+                reportNumber: report.claim_number,
+              }}
+            />
+          </div>
+          {/* Right — notifications + avatar */}
+          <div className="flex items-center gap-1 px-4 flex-1 justify-end">
             <NotificationBell />
             <UserAvatarMenu />
           </div>
@@ -164,7 +199,7 @@ export default async function ReportPage({ params }: ReportPageProps) {
           {/* Report Header */}
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
             {/* Report title - hidden on mobile, shown in breadcrumbs instead */}
-            <h1 className="hidden sm:block text-xl sm:text-2xl font-bold text-foreground truncate min-w-0">
+            <h1 className="hidden sm:block text-base sm:text-lg font-semibold text-foreground truncate min-w-0">
               {report.claim_number}
             </h1>
 
@@ -178,7 +213,7 @@ export default async function ReportPage({ params }: ReportPageProps) {
               </Link> */}
                 
               
-              <div className="flex items-center gap-2">
+              <div className="hidden sm:flex items-center gap-2">
               {/* Action buttons */}
               <div className="flex items-center gap-2 flex-wrap">
                 <ReportFeedbackButton reportId={report.$id} />
@@ -235,65 +270,6 @@ export default async function ReportPage({ params }: ReportPageProps) {
             </div>
           </div>
 
-          {/* Total Loss Indicator */}
-          {(() => {
-            const repairCost = report.estimated_total_repair_cost || 0;
-            const isTotalLoss = report.overall_severity === 'total_loss';
-            // Estimate vehicle value from assessment data if available
-            const coveredAmount = assessment?.covered_amount || 0;
-            const totalEstimate = assessment?.total_repair_estimate || repairCost;
-            // Total loss threshold: repair cost exceeds 70% of estimated vehicle value
-            // Use covered_amount as proxy for vehicle value when available
-            const vehicleValueEstimate = coveredAmount > totalEstimate ? coveredAmount * 1.3 : 0;
-            const totalLossRatio = vehicleValueEstimate > 0 ? (totalEstimate / vehicleValueEstimate) * 100 : 0;
-            const isNearTotalLoss = totalLossRatio >= 70 && !isTotalLoss;
-
-            if (!isTotalLoss && !isNearTotalLoss) return null;
-
-            return (
-              <div className={cn(
-                "rounded-lg border-2 p-4",
-                isTotalLoss
-                  ? "border-red-300 bg-red-50 dark:border-red-800 dark:bg-red-950/40"
-                  : "border-orange-300 bg-orange-50 dark:border-orange-800 dark:bg-orange-950/40"
-              )}>
-                <div className="flex items-start gap-3">
-                  <div className={cn(
-                    "w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0",
-                    isTotalLoss
-                      ? "bg-red-100 dark:bg-red-900/50"
-                      : "bg-orange-100 dark:bg-orange-900/50"
-                  )}>
-                    <HugeiconsIcon icon={AlertCircleIcon} size={20} className={
-                      isTotalLoss ? "text-red-600 dark:text-red-400" : "text-orange-600 dark:text-orange-400"
-                    } />
-                  </div>
-                  <div>
-                    <h3 className={cn(
-                      "text-sm font-bold",
-                      isTotalLoss
-                        ? "text-red-900 dark:text-red-300"
-                        : "text-orange-900 dark:text-orange-300"
-                    )}>
-                      {isTotalLoss ? "Total Loss Determination" : "Near Total Loss Warning"}
-                    </h3>
-                    <p className={cn(
-                      "text-sm mt-1",
-                      isTotalLoss
-                        ? "text-red-700 dark:text-red-400"
-                        : "text-orange-700 dark:text-orange-400"
-                    )}>
-                      {isTotalLoss
-                        ? "The AI assessment has determined this vehicle is a total loss. Repair costs exceed the vehicle's value, making replacement more economical than repair."
-                        : `Repair costs represent approximately ${totalLossRatio.toFixed(0)}% of the estimated vehicle value, approaching the typical total loss threshold (70-80%). A professional appraisal is recommended.`
-                      }
-                    </p>
-                  </div>
-                </div>
-              </div>
-            );
-          })()}
-
           {/* Estimated Repair Cost Summary */}
           {report.estimated_total_repair_cost > 0 && !assessment && (
             <div className="bg-card rounded-lg border border-border overflow-hidden">
@@ -336,7 +312,7 @@ export default async function ReportPage({ params }: ReportPageProps) {
               <div className="flex justify-between items-center px-4 py-3">
                 <span className="text-sm text-muted-foreground">Overall Severity</span>
                 <Badge className={getSeverityColor(report.overall_severity)}>
-                  {report.overall_severity}
+                  {report.overall_severity?.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase())}
                 </Badge>
               </div>
               <div className="flex justify-between items-center px-4 py-3">
@@ -557,23 +533,46 @@ export default async function ReportPage({ params }: ReportPageProps) {
                   {visibleDamages.map((detail) => (
                     <div key={detail.$id} className="px-4 py-3">
                       <div className="flex items-center justify-between mb-1">
-                        <div className="flex items-center gap-2">
-                          <span className="text-sm font-medium text-foreground capitalize">{detail.part_name}</span>
+                        <div className="flex items-center gap-2 min-w-0">
+                          <span className="text-sm font-medium text-foreground capitalize truncate">
+                            {detail.part_name}
+                          </span>
+                          {/* Price — desktop only */}
                           {detail.estimated_repair_cost && (
-                            <span className="text-sm font-semibold text-muted-foreground">{detail.estimated_repair_cost}</span>
+                            <span className="hidden sm:inline text-sm font-semibold text-muted-foreground">
+                              {detail.estimated_repair_cost}
+                            </span>
                           )}
-                        </div>
-                        <div className="flex items-center gap-1.5">
+                          {/* Recommendation — desktop only */}
                           {detail.repair_or_replace && detail.repair_or_replace !== 'undetermined' && (
-                            <span className="text-sm text-muted-foreground ">
+                            <span className="hidden sm:inline text-sm text-muted-foreground">
                               {detail.repair_or_replace}
                             </span>
                           )}
+                        </div>
+                        <div className="flex items-center gap-1.5 shrink-0">
                           <Badge className={getSeverityColor(detail.severity)}>
                             {detail.severity}
                           </Badge>
                         </div>
                       </div>
+
+                      {/* Price + Recommendation — mobile only, same line */}
+                      {(detail.estimated_repair_cost || (detail.repair_or_replace && detail.repair_or_replace !== 'undetermined')) && (
+                        <div className="flex items-center gap-3 sm:hidden mt-0.5">
+                          {detail.estimated_repair_cost && (
+                            <span className="text-sm font-semibold text-muted-foreground">
+                              {detail.estimated_repair_cost}
+                            </span>
+                          )}
+                          {detail.repair_or_replace && detail.repair_or_replace !== 'undetermined' && (
+                            <span className="text-sm text-muted-foreground capitalize">
+                              {detail.repair_or_replace}
+                            </span>
+                          )}
+                        </div>
+                      )}
+
                       {detail.description && (
                         <p className="text-sm text-muted-foreground mt-1">{detail.description}</p>
                       )}

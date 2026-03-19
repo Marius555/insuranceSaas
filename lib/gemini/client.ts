@@ -54,12 +54,15 @@ export async function getModelWithRateLimiting(
 
   // Check for forced model (for testing)
   const forcedModel = process.env.FORCE_GEMINI_MODEL;
-  if (forcedModel) {
+  if (forcedModel && !excludeModels.has(forcedModel)) {
     console.log(`⚠️ Using forced model for testing: ${forcedModel}`);
     console.log('  (Set via FORCE_GEMINI_MODEL environment variable)');
     console.log('  Rate limiting is BYPASSED in testing mode!');
 
     return { client, modelName: forcedModel };
+  }
+  if (forcedModel && excludeModels.has(forcedModel)) {
+    console.log(`⚠️ Forced model ${forcedModel} already failed — falling back to rate-limited selection`);
   }
 
   // Normal rate-limited model selection (with exclusion list for fallback)

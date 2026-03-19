@@ -1,8 +1,7 @@
 "use client";
 
-import { useState, useMemo, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { useRouter } from "next/navigation";
-import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import {
   Pagination,
@@ -13,7 +12,7 @@ import {
   PaginationNext,
   PaginationPrevious,
 } from "@/components/ui/pagination";
-import { SearchAreaIcon, CheckmarkCircle02Icon } from "@hugeicons/core-free-icons";
+import { CheckmarkCircle02Icon } from "@hugeicons/core-free-icons";
 import { InformationCircleIcon } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { useNotifications } from "@/lib/context/notification-context";
@@ -49,7 +48,6 @@ export function NotificationsListClient({
   const [total, setTotal] = useState(initialTotal);
   const [unreadCount, setUnreadCount] = useState(initialUnreadCount);
   const [filter, setFilter] = useState<NotificationFilter>("all");
-  const [searchQuery, setSearchQuery] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
   const [loading, setLoading] = useState(false);
   const highlightRef = useRef<HTMLButtonElement>(null);
@@ -85,7 +83,6 @@ export function NotificationsListClient({
   const handleFilterChange = (newFilter: NotificationFilter) => {
     setFilter(newFilter);
     setCurrentPage(1);
-    setSearchQuery("");
     fetchNotifications(1, newFilter);
   };
 
@@ -114,24 +111,8 @@ export function NotificationsListClient({
     }
   };
 
-  // Client-side search filtering
-  const filteredNotifications = useMemo(() => {
-    const query = searchQuery.toLowerCase().trim();
-    if (!query) return notifications;
-    return notifications.filter(
-      (n) =>
-        n.title.toLowerCase().includes(query) ||
-        n.message.toLowerCase().includes(query)
-    );
-  }, [notifications, searchQuery]);
-
-  const totalPages = searchQuery
-    ? Math.ceil(filteredNotifications.length / ITEMS_PER_PAGE)
-    : Math.ceil(total / ITEMS_PER_PAGE);
-
-  const displayedNotifications = searchQuery
-    ? filteredNotifications
-    : notifications;
+  const totalPages = Math.ceil(total / ITEMS_PER_PAGE);
+  const displayedNotifications = notifications;
 
   const getPageNumbers = () => {
     const pages: (number | "ellipsis")[] = [];
@@ -151,53 +132,43 @@ export function NotificationsListClient({
 
   return (
     <div className="flex flex-col gap-4">
-      {/* Search + Filter tabs + Mark all as read */}
-      <div className="flex items-center gap-2">
-        <div className="relative flex-1">
-          <HugeiconsIcon
-            icon={SearchAreaIcon}
-            className="absolute left-2.5 top-1/2 -translate-y-1/2 size-4 text-muted-foreground"
-          />
-          <Input
-            placeholder="Search notifications..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="pl-9"
-          />
-        </div>
+      {/* Filter tabs + Mark all as read */}
+      <div className="flex flex-col gap-2">
+        <div className="flex items-center justify-between gap-2">
+          <div className="flex items-center gap-1 rounded-lg bg-muted p-1">
+            {FILTER_TABS.map((tab) => (
+              <button
+                key={tab.value}
+                onClick={() => handleFilterChange(tab.value)}
+                className={`inline-flex items-center justify-center px-3 py-1.5 text-sm font-medium rounded-md transition-colors ${
+                  filter === tab.value
+                    ? "bg-background text-foreground shadow-sm"
+                    : "text-muted-foreground hover:text-foreground"
+                }`}
+              >
+                {tab.label}
+                {tab.value === "unread" && unreadCount > 0 && (
+                  <span className="ml-1.5 inline-flex items-center justify-center min-w-[18px] h-[18px] rounded-full bg-primary text-primary-foreground text-[10px] font-bold px-1">
+                    {unreadCount > 99 ? "99+" : unreadCount}
+                  </span>
+                )}
+              </button>
+            ))}
+          </div>
 
-        <div className="flex items-center gap-1 rounded-lg bg-muted p-1">
-          {FILTER_TABS.map((tab) => (
-            <button
-              key={tab.value}
-              onClick={() => handleFilterChange(tab.value)}
-              className={`inline-flex items-center justify-center min-w-[72px] px-3 py-1.5 text-sm font-medium rounded-md transition-colors ${
-                filter === tab.value
-                  ? "bg-background text-foreground shadow-sm"
-                  : "text-muted-foreground hover:text-foreground"
-              }`}
+          {unreadCount > 0 && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleMarkAllRead}
+              className="gap-1.5 shrink-0"
             >
-              {tab.label}
-              {tab.value === "unread" && unreadCount > 0 && (
-                <span className="ml-1.5 inline-flex items-center justify-center min-w-[18px] h-[18px] rounded-full bg-primary text-primary-foreground text-[10px] font-bold px-1">
-                  {unreadCount > 99 ? "99+" : unreadCount}
-                </span>
-              )}
-            </button>
-          ))}
+              <HugeiconsIcon icon={CheckmarkCircle02Icon} className="size-4" />
+              <span className="hidden sm:inline">Mark all as read</span>
+              <span className="sm:hidden">Mark read</span>
+            </Button>
+          )}
         </div>
-
-        {unreadCount > 0 && (
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={handleMarkAllRead}
-            className="gap-1.5 shrink-0"
-          >
-            <HugeiconsIcon icon={CheckmarkCircle02Icon} className="size-4" />
-            Mark all as read
-          </Button>
-        )}
       </div>
 
       {/* Notification list */}
@@ -207,13 +178,11 @@ export function NotificationsListClient({
         </div>
       ) : displayedNotifications.length === 0 ? (
         <div className="text-center py-8 text-muted-foreground text-sm">
-          {searchQuery
-            ? "No notifications match your search."
-            : filter === "unread"
-              ? "No unread notifications."
-              : filter === "read"
-                ? "No read notifications."
-                : "No notifications yet."}
+          {filter === "unread"
+            ? "No unread notifications."
+            : filter === "read"
+              ? "No read notifications."
+              : "No notifications yet."}
         </div>
       ) : (
         <div className="rounded-lg border divide-y">
@@ -274,8 +243,7 @@ export function NotificationsListClient({
         </div>
       )}
 
-      {/* Pagination - only show when not searching (search is client-side on current page) */}
-      {!searchQuery && totalPages > 1 && (
+      {totalPages > 1 && (
         <Pagination>
           <PaginationContent>
             <PaginationItem>

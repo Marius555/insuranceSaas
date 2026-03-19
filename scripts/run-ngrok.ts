@@ -33,6 +33,39 @@ function parsePort(): number {
   return port;
 }
 
+function hasFlag(flag: string): boolean {
+  return process.argv.includes(flag);
+}
+
+function startNextServer(): ChildProcess {
+  console.log("Starting Next.js dev server...");
+  const nextProcess = spawn("npm", ["run", "dev"], {
+    stdio: ["ignore", "pipe", "pipe"],
+    cwd: process.cwd(),
+    shell: true,
+  });
+
+  nextProcess.stdout?.on("data", (data: Buffer) => {
+    const lines = data.toString().split("\n").filter(Boolean);
+    for (const line of lines) {
+      console.log(`[next] ${line.trim()}`);
+    }
+  });
+
+  nextProcess.stderr?.on("data", (data: Buffer) => {
+    const lines = data.toString().split("\n").filter(Boolean);
+    for (const line of lines) {
+      console.error(`[next] ${line.trim()}`);
+    }
+  });
+
+  nextProcess.on("error", (err) => {
+    console.error(`[next] Failed to start: ${err.message}`);
+  });
+
+  return nextProcess;
+}
+
 function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
@@ -198,6 +231,7 @@ function startNgrokProcess(port: number): ChildProcess {
 
 async function main(): Promise<void> {
   const port = parsePort();
+  const skipNext = hasFlag("--no-next");
 
   console.log("=".repeat(50));
   console.log("ngrok Tunnel Runner");
@@ -205,14 +239,23 @@ async function main(): Promise<void> {
   console.log(`Target port: ${port}`);
   console.log("");
 
+  // Optionally start Next.js dev server
+  let nextProcess: ChildProcess | null = null;
+  if (!skipNext) {
+    nextProcess = startNextServer();
+  } else {
+    console.log("Skipping Next.js startup (--no-next flag detected)");
+  }
+
   // Start ngrok process directly
   console.log("Starting ngrok tunnel...");
   const ngrokProcess = startNgrokProcess(port);
 
   // Setup cleanup handler
   const cleanup = () => {
-    console.log("\nShutting down ngrok...");
+    console.log("\nShutting down...");
     ngrokProcess.kill();
+    if (nextProcess) nextProcess.kill();
     process.exit(0);
   };
 

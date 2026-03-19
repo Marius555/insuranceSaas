@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
 import { HugeiconsIcon } from "@hugeicons/react";
 import {
   Tick02Icon,
@@ -14,6 +13,7 @@ import { Button } from "@/components/ui/button";
 import { GoogleSignInModal } from "@/components/auth/google-signin-modal";
 import { savePlanSelection } from "@/lib/utils/auth-redirect-storage";
 import { PLAN_DAILY_LIMITS } from "@/lib/evaluation-limits";
+import { createCheckoutSession } from "@/lib/stripe/createCheckoutSession";
 import type { UserDocument } from "@/lib/types/appwrite";
 
 interface PricingSectionProps {
@@ -95,18 +95,22 @@ function setPendingPlanCookie(slug: string) {
 }
 
 export function PricingSection({ session, userDoc }: PricingSectionProps) {
-  const router = useRouter();
   const [showSignInModal, setShowSignInModal] = useState(false);
+  const [isLoading, setIsLoading] = useState<string | null>(null);
 
-  const handleSelect = (slug: string) => {
-    savePlanSelection(slug);
-
-    if (session && userDoc) {
-      router.push(`/auth/dashboard/${userDoc.$id}/buy_plan?plan=${slug}`);
-    } else {
-      // Set cookie for server-side redirect after OAuth
+  const handleSelect = async (slug: string) => {
+    if (!session || !userDoc) {
+      savePlanSelection(slug);
       setPendingPlanCookie(slug);
       setShowSignInModal(true);
+      return;
+    }
+    // authenticated path — paid plans only (free button is disabled)
+    setIsLoading(slug);
+    const result = await createCheckoutSession(userDoc.$id, slug, session.email);
+    setIsLoading(null);
+    if (result.success) {
+      window.location.href = result.url;
     }
   };
 
@@ -183,13 +187,33 @@ export function PricingSection({ session, userDoc }: PricingSectionProps) {
             </CardContent>
 
             <CardFooter className="mt-auto">
-              <Button
-                onClick={() => handleSelect(plan.slug)}
-                variant={plan.highlighted ? "default" : "outline"}
-                className="w-full"
-              >
-                {plan.price === 0 ? "Get Started" : `Select ${plan.name}`}
-              </Button>
+              {userDoc?.pricing_plan === plan.slug ? (
+                <Button
+                  variant="outline"
+                  className="w-full"
+                  disabled
+                >
+                  Current Plan
+                </Button>
+              ) : plan.price === 0 ? (
+                <Button
+                  onClick={() => handleSelect(plan.slug)}
+                  variant="outline"
+                  className="w-full"
+                  disabled={!!session}
+                >
+                  Get Started
+                </Button>
+              ) : (
+                <Button
+                  onClick={() => handleSelect(plan.slug)}
+                  variant={plan.highlighted ? "default" : "outline"}
+                  className="w-full"
+                  disabled={isLoading === plan.slug}
+                >
+                  {isLoading === plan.slug ? "Redirecting..." : `Select ${plan.name}`}
+                </Button>
+              )}
             </CardFooter>
           </Card>
         ))}

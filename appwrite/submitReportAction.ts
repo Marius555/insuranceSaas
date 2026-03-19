@@ -109,10 +109,10 @@ export async function submitReportAction(formData: FormData) {
     await decrementEvaluationLimit(userId);
     revalidatePath(`/auth/dashboard/${userId}/reports`);
     revalidatePath(`/auth/dashboard/${userId}`);
-    revalidateTag(`reports-${userId}`);
-    revalidateTag(`policies-${userId}`);
+    revalidateTag(`reports-${userId}`, { expire: 0 });
+    revalidateTag(`policies-${userId}`, { expire: 0 });
     if (insuranceCompanyId) {
-      revalidateTag(`reports-company-${insuranceCompanyId}`);
+      revalidateTag(`reports-company-${insuranceCompanyId}`, { expire: 0 });
     }
   }
 

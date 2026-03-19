@@ -1,7 +1,6 @@
 "use client";
 
-import { useState, useTransition } from "react";
-import { useRouter } from "next/navigation";
+import { useState } from "react";
 import { deleteUserAccount } from "@/appwrite/deleteUserAccount";
 import { Button } from "@/components/ui/button";
 import {
@@ -12,7 +11,6 @@ import {
 } from "@/components/ui/card";
 import {
   AlertDialog,
-  AlertDialogAction,
   AlertDialogCancel,
   AlertDialogContent,
   AlertDialogDescription,
@@ -26,20 +24,25 @@ import { HugeiconsIcon } from "@hugeicons/react";
 import { Cancel01Icon, Delete02Icon } from "@hugeicons/core-free-icons";
 
 export default function AccountSettingsPage() {
-  const router = useRouter();
-  const [isPending, startTransition] = useTransition();
+  const [isOpen, setIsOpen] = useState(false);
+  const [isPending, setIsPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const handleDeleteAccount = () => {
+  const handleDeleteAccount = async () => {
     setError(null);
-    startTransition(async () => {
+    setIsPending(true);
+    try {
       const result = await deleteUserAccount();
       if (result.success) {
-        router.push("/");
+        window.location.href = "/";
       } else {
-        setError(result.message);
+        setError(result.message ?? "Failed to delete account.");
       }
-    });
+    } catch {
+      setError("Something went wrong. Please try again.");
+    } finally {
+      setIsPending(false);
+    }
   };
 
   return (
@@ -58,13 +61,13 @@ export default function AccountSettingsPage() {
               Permanently delete your account and all associated data. This
               action cannot be undone.
             </p>
-            {error && <p className="mt-2 text-sm text-destructive">{error}</p>}
-            <AlertDialog>
+            <AlertDialog open={isOpen} onOpenChange={(open) => { if (!isPending) setIsOpen(open); }}>
               <AlertDialogTrigger asChild>
                 <Button
                   variant="destructive"
                   className="mt-4 w-full"
                   disabled={isPending}
+                  onClick={() => setIsOpen(true)}
                 >
                   {isPending ? "Deleting..." : "Delete Account"}
                 </Button>
@@ -73,7 +76,7 @@ export default function AccountSettingsPage() {
                 <AlertDialogHeader>
                   <div className="flex flex-row w-full justify-between items-center">
                     <AlertDialogTitle>Delete Account</AlertDialogTitle>
-                    <AlertDialogCancel variant="ghost">
+                    <AlertDialogCancel variant="ghost" disabled={isPending}>
                       <HugeiconsIcon
                         icon={Cancel01Icon}
                         className="hover:cursor-pointer"
@@ -86,22 +89,27 @@ export default function AccountSettingsPage() {
                     undone.
                   </AlertDialogDescription>
                 </AlertDialogHeader>
-                <AlertDialogFooter>
-                  <AlertDialogCancel>Cancel</AlertDialogCancel>
-                  <AlertDialogAction
-                    variant="destructive"
-                    onClick={handleDeleteAccount}
-                    disabled={isPending}
-                  >
-                    {isPending ? (
-                      <>Deleting...</>
-                    ) : (
-                      <>
-                        Delete Account
-                        <HugeiconsIcon icon={Delete02Icon} />
-                      </>
-                    )}
-                  </AlertDialogAction>
+                <AlertDialogFooter className="flex-col items-stretch sm:flex-row sm:items-center">
+                  {error && (
+                    <p className="text-sm text-destructive flex-1">{error}</p>
+                  )}
+                  <div className="flex gap-2 sm:ml-auto">
+                    <AlertDialogCancel disabled={isPending}>Cancel</AlertDialogCancel>
+                    <Button
+                      variant="destructive"
+                      onClick={handleDeleteAccount}
+                      disabled={isPending}
+                    >
+                      {isPending ? (
+                        <>Deleting...</>
+                      ) : (
+                        <>
+                          Delete Account
+                          <HugeiconsIcon icon={Delete02Icon} />
+                        </>
+                      )}
+                    </Button>
+                  </div>
                 </AlertDialogFooter>
               </AlertDialogContent>
             </AlertDialog>

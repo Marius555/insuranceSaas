@@ -71,7 +71,7 @@ export function NotificationBell() {
             No notifications yet
           </div>
         ) : (
-          <div className="max-h-80 overflow-y-auto">
+          <div className="max-h-[224px] overflow-y-auto">
             <div className="divide-y">
               {notifications.map((notification) => (
                 <button
@@ -92,17 +92,12 @@ export function NotificationBell() {
                       <p className={`text-sm leading-tight truncate ${!notification.is_read ? "font-semibold" : "font-normal"}`}>
                         {notification.title}
                       </p>
-                      {!notification.is_read && (
-                        <span className="shrink-0 px-1.5 py-0.5 text-[10px] font-medium bg-primary/10 text-primary rounded-full">
-                          New
-                        </span>
-                      )}
-                      <span className="shrink-0 ml-auto text-[11px] text-muted-foreground">
-                        {formatRelativeTime(notification.$createdAt)}
+                      <span className={`shrink-0 ml-auto text-[11px] ${!notification.is_read ? "font-semibold text-primary" : "text-muted-foreground"}`}>
+                        {!notification.is_read ? "New" : formatRelativeTime(notification.$createdAt)}
                       </span>
                     </div>
                     <p className="text-xs text-muted-foreground mt-0.5 line-clamp-2">
-                      {notification.message}
+                      Your damage report has been successfully analyzed
                     </p>
                   </div>
                 </button>

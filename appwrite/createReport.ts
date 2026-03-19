@@ -283,6 +283,7 @@ function normalizeDamageAge(
     'pre-existing': 'months_old',
     'pre_existing': 'months_old',
     'pre_existing_modifications_and_wear': 'months_old',
+    'very_old': 'months_old',
   };
 
   const mapped = ageMap[normalized];
@@ -856,7 +857,7 @@ export async function createReportFromAnalysis(
     createNotification({
       user_id: userId,
       title: 'Report Analysis Complete',
-      message: `Your damage report ${report.claim_number} has been analyzed. Estimated repair cost: $${analysisData.estimatedTotalRepairCost.toLocaleString('en-US')}.`,
+      message: `Your damage report has been analyzed. Estimated repair cost: $${analysisData.estimatedTotalRepairCost.toLocaleString('en-US')}.`,
       type: 'report_completed',
       link: `/auth/reports/${reportId}`,
       report_id: reportId,

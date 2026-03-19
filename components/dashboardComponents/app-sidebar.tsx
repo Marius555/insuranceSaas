@@ -6,7 +6,6 @@ import Link from "next/link"
 import {
     Home01Icon,
     FileValidationIcon,
-    SolidLine02Icon,
     Settings02Icon,
     Notification01Icon,
     PresentationBarChart01Icon,
@@ -14,8 +13,9 @@ import {
 
 import * as React from "react"
 
-import { NavSecondary } from "./nav-secondary"
+import { NavSecondary, NavSecondaryItem } from "./nav-secondary"
 import { FeedbackModal } from "./feedback-modal"
+import { SupportModal } from "./support-modal"
 import { useUser } from "@/lib/context/user-context"
 import {
   Sidebar,
@@ -59,18 +59,12 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
     },
     {
       title: "Settings",
-      url: `/auth/dashboard/${userId}/settings/general`,
+      url: `/auth/dashboard/${userId}/settings`,
       icon: Settings02Icon,
     },
   ]
 
-  const navSecondary = [
-    {
-      title: "Support",
-      url: "/contact",
-      icon: () => <HugeiconsIcon icon={SolidLine02Icon} />,
-    },
-  ]
+  const navSecondary: NavSecondaryItem[] = []
 
   return (
     <Sidebar variant="inset" {...props}>
@@ -132,6 +126,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
         </SidebarGroup>
         <SidebarSeparator />
         <NavSecondary items={navSecondary}>
+          <SupportModal />
           <FeedbackModal />
         </NavSecondary>
       </SidebarContent>

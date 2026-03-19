@@ -21,8 +21,8 @@ import type {
   GeminiResult,
 } from '@/lib/gemini/types';
 
-// Timeout for Gemini AI analysis (60 seconds)
-const GEMINI_TIMEOUT_MS = 60000;
+// Timeout for Gemini AI analysis (240 seconds — guided mode processes 5 photos + video)
+const GEMINI_TIMEOUT_MS = 240000;
 
 /**
  * Complete Report Submission Server Action
@@ -318,34 +318,54 @@ export async function submitReport(
       ...input.mediaFiles,
       ...(input.supplementaryPhotos || []),
     ];
-    const mediaUploadResult = await uploadMediaFiles(allMediaFiles);
-    if (!mediaUploadResult.success) {
-      return {
-        success: false,
-        message: `Failed to upload media files: ${mediaUploadResult.message}`,
-      };
-    }
-
-    const mediaFileIds = mediaUploadResult.fileIds!;
-
+    let mediaFileIds: string[];
     let policyFileId: string | undefined;
+
     if (input.policyFile) {
-      // Upload new policy file
-      const policyUploadResult = await uploadPolicyFile(input.policyFile);
+      // Upload media and new policy in parallel
+      const [mediaUploadResult, policyUploadResult] = await Promise.all([
+        uploadMediaFiles(allMediaFiles),
+        uploadPolicyFile(input.policyFile),
+      ]);
+
+      if (!mediaUploadResult.success) {
+        // Cleanup policy file if it succeeded
+        if (policyUploadResult.success && policyUploadResult.fileId) {
+          await deleteFile(policyUploadResult.fileId);
+        }
+        return {
+          success: false,
+          message: `Failed to upload media files: ${mediaUploadResult.message}`,
+        };
+      }
+
       if (!policyUploadResult.success) {
         // Cleanup uploaded media files
-        await Promise.all(mediaFileIds.map((id) => deleteFile(id)));
-
+        await Promise.all(mediaUploadResult.fileIds!.map((id) => deleteFile(id)));
         return {
           success: false,
           message: `Failed to upload policy file: ${policyUploadResult.message}`,
         };
       }
+
+      mediaFileIds = mediaUploadResult.fileIds!;
       policyFileId = policyUploadResult.fileId;
-    } else if (input.existingPolicyFileId) {
-      // Reuse existing policy file ID (no upload needed)
-      policyFileId = input.existingPolicyFileId;
-      console.log('📄 Reusing existing policy file:', policyFileId);
+    } else {
+      // No new policy — sequential path unchanged
+      const mediaUploadResult = await uploadMediaFiles(allMediaFiles);
+      if (!mediaUploadResult.success) {
+        return {
+          success: false,
+          message: `Failed to upload media files: ${mediaUploadResult.message}`,
+        };
+      }
+      mediaFileIds = mediaUploadResult.fileIds!;
+
+      if (input.existingPolicyFileId) {
+        // Reuse existing policy file ID (no upload needed)
+        policyFileId = input.existingPolicyFileId;
+        console.log('📄 Reusing existing policy file:', policyFileId);
+      }
     }
 
     console.log(`✅ Uploaded ${mediaFileIds.length} media files${policyFileId ? (input.existingPolicyFileId ? ' + existing policy' : ' + new policy') : ''}`);

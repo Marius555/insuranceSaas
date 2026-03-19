@@ -13,6 +13,14 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog"
 import {
+  Drawer,
+  DrawerContent,
+  DrawerHeader,
+  DrawerTitle,
+  DrawerTrigger,
+  DrawerFooter,
+} from "@/components/ui/drawer"
+import {
   Select,
   SelectContent,
   SelectItem,
@@ -27,6 +35,7 @@ import {
   SidebarMenuButton,
   SidebarMenuItem,
 } from "@/components/ui/sidebar"
+import { useIsMobile } from "@/hooks/use-is-mobile"
 
 type FeedbackCategory = 'bug_report' | 'feature_request' | 'general' | 'complaint'
 
@@ -45,6 +54,7 @@ export function FeedbackModal() {
   const [feedbackText, setFeedbackText] = React.useState('')
   const [isSubmitting, setIsSubmitting] = React.useState(false)
   const [errorMessage, setErrorMessage] = React.useState('')
+  const isMobile = useIsMobile()
 
   React.useEffect(() => {
     setMounted(true)
@@ -60,7 +70,6 @@ export function FeedbackModal() {
   const handleOpenChange = (newOpen: boolean) => {
     setOpen(newOpen)
     if (!newOpen) {
-      // Delay reset to allow close animation to complete
       setTimeout(() => {
         resetForm()
       }, 150)
@@ -89,20 +98,119 @@ export function FeedbackModal() {
     setIsSubmitting(false)
 
     if (result.success) {
-      setOpen(false)  // Close immediately on success
+      setOpen(false)
     } else {
       setErrorMessage(result.message || 'Failed to submit feedback')
     }
   }
 
+  const trigger = (
+    <SidebarMenuButton size="sm">
+      <HugeiconsIcon icon={SentIcon} />
+      <span>Feedback</span>
+    </SidebarMenuButton>
+  )
+
   if (!mounted) {
     return (
       <SidebarMenuItem>
-        <SidebarMenuButton size="sm">
-          <HugeiconsIcon icon={SentIcon} />
-          <span>Feedback</span>
-        </SidebarMenuButton>
+        {trigger}
       </SidebarMenuItem>
+    )
+  }
+
+  const formFields = (
+    <form onSubmit={handleSubmit} className="grid gap-4 px-4 pb-4">
+      <div className="grid gap-2">
+        <Label htmlFor="category">Category</Label>
+        <Select
+          value={category}
+          onValueChange={(value) => setCategory(value as FeedbackCategory)}
+        >
+          <SelectTrigger className="w-full">
+            <SelectValue placeholder="Select a category" />
+          </SelectTrigger>
+          <SelectContent>
+            {Object.entries(categoryLabels).map(([value, label]) => (
+              <SelectItem key={value} value={value}>
+                {label}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
+
+      <div className="grid gap-2">
+        <Label>Rating</Label>
+        <div className="flex gap-1">
+          {[1, 2, 3, 4, 5].map((star) => (
+            <button
+              key={star}
+              type="button"
+              onClick={() => setRating(star)}
+              className="p-1 rounded-md hover:bg-muted transition-colors"
+            >
+              <HugeiconsIcon
+                icon={StarIcon}
+                className={`size-6 ${
+                  star <= rating
+                    ? 'text-yellow-500 fill-yellow-500'
+                    : 'text-muted-foreground'
+                }`}
+                fill={star <= rating ? 'currentColor' : 'none'}
+              />
+            </button>
+          ))}
+        </div>
+      </div>
+
+      <div className="grid gap-2">
+        <Label htmlFor="feedback">Your Feedback</Label>
+        <Textarea
+          id="feedback"
+          placeholder="Tell us what you think..."
+          value={feedbackText}
+          onChange={(e) => setFeedbackText(e.target.value)}
+          rows={4}
+        />
+      </div>
+
+      {errorMessage && (
+        <p className="text-sm text-destructive">{errorMessage}</p>
+      )}
+
+      <div className="flex justify-end gap-2">
+        <Button
+          type="button"
+          variant="outline"
+          onClick={() => handleOpenChange(false)}
+        >
+          Cancel
+        </Button>
+        <Button type="submit" disabled={isSubmitting}>
+          {isSubmitting && <HugeiconsIcon icon={Loading03Icon} className="mr-2 size-4 animate-spin" />}
+          {isSubmitting ? 'Submitting...' : 'Submit Feedback'}
+        </Button>
+      </div>
+    </form>
+  )
+
+  if (isMobile) {
+    return (
+      <Drawer open={open} onOpenChange={handleOpenChange}>
+        <SidebarMenuItem>
+          <DrawerTrigger asChild>
+            {trigger}
+          </DrawerTrigger>
+        </SidebarMenuItem>
+        <DrawerContent>
+          <DrawerHeader>
+            <DrawerTitle>Submit Feedback</DrawerTitle>
+          </DrawerHeader>
+          {formFields}
+          <DrawerFooter />
+        </DrawerContent>
+      </Drawer>
     )
   }
 
@@ -110,10 +218,7 @@ export function FeedbackModal() {
     <Dialog open={open} onOpenChange={handleOpenChange}>
       <SidebarMenuItem>
         <DialogTrigger asChild>
-          <SidebarMenuButton size="sm">
-            <HugeiconsIcon icon={SentIcon} />
-            <span>Feedback</span>
-          </SidebarMenuButton>
+          {trigger}
         </DialogTrigger>
       </SidebarMenuItem>
       <DialogContent className="sm:max-w-md">
@@ -123,79 +228,7 @@ export function FeedbackModal() {
             Share your thoughts with us. Your feedback helps us improve the platform.
           </DialogDescription>
         </DialogHeader>
-        <form onSubmit={handleSubmit} className="grid gap-4">
-          <div className="grid gap-2">
-            <Label htmlFor="category">Category</Label>
-            <Select
-              value={category}
-              onValueChange={(value) => setCategory(value as FeedbackCategory)}
-            >
-              <SelectTrigger className="w-full">
-                <SelectValue placeholder="Select a category" />
-              </SelectTrigger>
-              <SelectContent>
-                {Object.entries(categoryLabels).map(([value, label]) => (
-                  <SelectItem key={value} value={value}>
-                    {label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-
-          <div className="grid gap-2">
-            <Label>Rating</Label>
-            <div className="flex gap-1">
-              {[1, 2, 3, 4, 5].map((star) => (
-                <button
-                  key={star}
-                  type="button"
-                  onClick={() => setRating(star)}
-                  className="p-1 rounded-md hover:bg-muted transition-colors"
-                >
-                  <HugeiconsIcon
-                    icon={StarIcon}
-                    className={`size-6 ${
-                      star <= rating
-                        ? 'text-yellow-500 fill-yellow-500'
-                        : 'text-muted-foreground'
-                    }`}
-                    fill={star <= rating ? 'currentColor' : 'none'}
-                  />
-                </button>
-              ))}
-            </div>
-          </div>
-
-          <div className="grid gap-2">
-            <Label htmlFor="feedback">Your Feedback</Label>
-            <Textarea
-              id="feedback"
-              placeholder="Tell us what you think..."
-              value={feedbackText}
-              onChange={(e) => setFeedbackText(e.target.value)}
-              rows={4}
-            />
-          </div>
-
-          {errorMessage && (
-            <p className="text-sm text-destructive">{errorMessage}</p>
-          )}
-
-          <DialogFooter>
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => handleOpenChange(false)}
-            >
-              Cancel
-            </Button>
-            <Button type="submit" disabled={isSubmitting}>
-              {isSubmitting && <HugeiconsIcon icon={Loading03Icon} className="mr-2 size-4 animate-spin" />}
-              {isSubmitting ? 'Submitting...' : 'Submit Feedback'}
-            </Button>
-          </DialogFooter>
-        </form>
+        {formFields}
       </DialogContent>
     </Dialog>
   )

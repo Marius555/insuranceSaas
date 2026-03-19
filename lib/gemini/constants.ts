@@ -118,7 +118,7 @@ export const MODEL_RATE_LIMITS = {
  */
 export const SECURITY_CONFIG = {
   ENABLE_INJECTION_SCANNING: true,  // Enable security scanning for uploaded files
-  MAX_IMAGES_PER_REQUEST: 5,         // Maximum number of images per analysis
+  MAX_IMAGES_PER_REQUEST: 10,        // Maximum number of images per analysis
   HIGH_RISK_THRESHOLD: 100000,        // $100k - flag for manual review
   LOW_CONFIDENCE_THRESHOLD: 0.3,      // Flag results below 30% confidence
 } as const;

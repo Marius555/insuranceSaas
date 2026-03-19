@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useRef } from "react"
+import { useState } from "react"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
 import { HugeiconsIcon } from "@hugeicons/react"
@@ -27,6 +27,11 @@ import { NotificationBell } from "@/components/notifications/notification-bell"
 import { UserAvatarMenu } from "@/components/dashboardComponents/user-avatar-menu"
 import { useUser } from "@/lib/context/user-context"
 
+import GeneralSettingsPage from "./general/page"
+import PrivacySettingsPage from "./privacy/page"
+import BillingSettingsPage from "./billing/page"
+import AccountSettingsPage from "./account/page"
+
 const tabs = [
   { label: "General", href: "general", icon: Settings02Icon },
   { label: "Privacy", href: "privacy", icon: Shield01Icon },
@@ -34,23 +39,24 @@ const tabs = [
   { label: "Account", href: "account", icon: UserCircleIcon },
 ]
 
+const TAB_CONTENT: Record<string, React.ReactNode> = {
+  general: <GeneralSettingsPage />,
+  privacy: <PrivacySettingsPage />,
+  billing: <BillingSettingsPage />,
+  account: <AccountSettingsPage />,
+}
+
 export default function SettingsLayout({
-  children,
+  children: _children,
 }: {
   children: React.ReactNode
 }) {
   const pathname = usePathname()
   const { userId } = useUser()
-  const basePath = `/auth/dashboard/${userId}/settings`
-  const activeTab = pathname.split("/").pop() || "general"
-
-  // Track previous tab to skip animation on initial mount (page-level animation handles it)
-  const prevTabRef = useRef<string | null>(null)
-  const shouldAnimate = prevTabRef.current !== null && prevTabRef.current !== activeTab
-
-  useEffect(() => {
-    prevTabRef.current = activeTab
-  }, [activeTab])
+  const [activeTab, setActiveTab] = useState(() => {
+    const segment = pathname.split("/").pop() || "general"
+    return tabs.some((t) => t.href === segment) ? segment : "general"
+  })
 
   return (
     <SidebarInset>
@@ -84,29 +90,28 @@ export default function SettingsLayout({
       <div className="flex flex-1 flex-col p-4 pt-0">
         <div className="mx-auto w-full max-w-2xl">
           <nav className="mb-4 grid grid-cols-4 gap-1">
-            {tabs.map((tab) => {
-              const fullHref = `${basePath}/${tab.href}`
-              const isActive = pathname === fullHref
-              return (
-                <Button
-                  key={tab.href}
-                  variant={isActive ? "secondary" : "ghost"}
-                  size="sm"
-                  className="w-full justify-center"
-                  asChild
-                >
-                  <Link href={fullHref} data-settings-tab>
-                    <HugeiconsIcon icon={tab.icon} />
-                    {tab.label}
-                  </Link>
-                </Button>
-              )
-            })}
+            {tabs.map((tab) => (
+              <Button
+                key={tab.href}
+                variant={activeTab === tab.href ? "secondary" : "ghost"}
+                size="sm"
+                className="w-full justify-center"
+                onClick={() => setActiveTab(tab.href)}
+              >
+                <HugeiconsIcon icon={tab.icon} />
+                {tab.label}
+              </Button>
+            ))}
           </nav>
           <Card className="min-h-[480px]">
-            <div key={activeTab} className={shouldAnimate ? "animate-state-fade-in" : ""}>
-              {children}
-            </div>
+            {tabs.map((tab) => (
+              <div
+                key={tab.href}
+                className={tab.href === activeTab ? "animate-state-fade-in" : "hidden"}
+              >
+                {TAB_CONTENT[tab.href]}
+              </div>
+            ))}
           </Card>
         </div>
       </div>

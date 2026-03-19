@@ -12,6 +12,7 @@ interface UsePhotoCaptureReturn {
   photos: CapturedPhoto[];
   capturePhoto: (stream: MediaStream, stepLabel: string) => Promise<boolean>;
   clearPhotos: () => void;
+  removePhoto: (index: number) => void;
   isCapturing: boolean;
 }
 
@@ -117,5 +118,13 @@ export function usePhotoCapture(): UsePhotoCaptureReturn {
     });
   }, []);
 
-  return { photos, capturePhoto, clearPhotos, isCapturing };
+  const removePhoto = useCallback((index: number) => {
+    setPhotos((prev) => {
+      const removed = prev[index];
+      if (removed) URL.revokeObjectURL(removed.thumbnailUrl);
+      return prev.filter((_, i) => i !== index);
+    });
+  }, []);
+
+  return { photos, capturePhoto, clearPhotos, removePhoto, isCapturing };
 }

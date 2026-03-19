@@ -4,7 +4,7 @@ import { useCallback, useEffect, useRef } from "react";
 
 interface OAuthPopupOptions {
   theme?: string;
-  onSuccess: (data: { userId: string; name: string; email: string }) => void;
+  onSuccess: (data: { userId: string; name: string; email: string; onboardingCompleted: boolean }) => void;
   onError: (error: string) => void;
   onPopupBlocked: () => void;
   onPopupClosed: () => void;
@@ -46,6 +46,7 @@ export function useOAuthPopup({
           userId: data.userId,
           name: data.name,
           email: data.email,
+          onboardingCompleted: !!(data.onboardingCompleted),
         });
       } else if (data.type === "oauth-error") {
         cleanup();

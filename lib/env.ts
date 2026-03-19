@@ -22,6 +22,9 @@ export const STORAGE_BUCKET_ID = process.env.STORAGE_BUKET_ID!; // Note: preserv
 export const INSURANCE_COMPANIES_ALLOWED =
   process.env.INSURANCE_COMPANIES_ALLOWED === 'true';
 
+/** Feature flag: whether the admin dashboard is accessible */
+export const ADMIN_PAGE_ACTIVE = process.env.ADMIN_PAGE_ACTIVE === 'true';
+
 /**
  * Collection IDs for all database collections
  * These are automatically populated by the schema submission script
@@ -40,6 +43,12 @@ export const COLLECTION_IDS = {
   NOTIFICATIONS: process.env.NOTIFICATIONS_COLLECTION_ID!,
   NEWS_POSTS: process.env.NEWS_POSTS_COLLECTION_ID!,
 } as const;
+
+/**
+ * Stripe price IDs
+ */
+export const STRIPE_PRO_PRICE_ID = process.env.PRO_PLAN_PRICE_ID!;
+export const STRIPE_MAX_PRICE_ID = process.env.MAX_PLAN_PRICE_ID!;
 
 /**
  * Type-safe collection ID keys

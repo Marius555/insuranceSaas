@@ -44,7 +44,7 @@ export default async function ReportsLayout({ children, params }: ReportsLayoutP
       const limit = getPlanLimit(plan);
       const today = new Date().toISOString().slice(0, 10);
       if (userDoc?.evaluation_reset_date !== today) return limit;
-      return userDoc?.evaluation_times ?? limit;
+      return Math.min(userDoc?.evaluation_times ?? limit, limit);
     })(),
     evaluationLimit: getPlanLimit(userDoc?.pricing_plan || 'free'),
   };

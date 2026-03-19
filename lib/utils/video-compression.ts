@@ -7,7 +7,7 @@ export interface CompressionResult {
   message?: string;
 }
 
-const MAX_SIZE_BYTES = 20 * 1024 * 1024; // 20MB
+const MAX_SIZE_BYTES = 55 * 1024 * 1024; // 55MB — 55MB × 1.33 base64 = ~73MB, under 75MB limit
 
 /**
  * Check if video file needs compression (exceeds 20MB)

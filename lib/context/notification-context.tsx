@@ -41,9 +41,11 @@ export function NotificationProvider({
     }
   }, [userId]);
 
-  // Poll every 30s
+  // Poll every 3 minutes, skip when tab is hidden
   useEffect(() => {
-    const interval = setInterval(refresh, 30000);
+    const interval = setInterval(() => {
+      if (!document.hidden) refresh();
+    }, 180_000);
     return () => clearInterval(interval);
   }, [refresh]);
 

@@ -16,7 +16,7 @@ export async function getNotifications(userId: string): Promise<GetNotifications
   try {
     const { databases } = await adminAction();
 
-    // Fetch 20 most recent notifications
+    // Fetch 20 most recent notifications; compute unread count client-side
     const result = await databases.listDocuments<NotificationDocument>(
       DATABASE_ID,
       COLLECTION_IDS.NOTIFICATIONS,
@@ -27,22 +27,10 @@ export async function getNotifications(userId: string): Promise<GetNotifications
       ]
     );
 
-    // Count unread
-    const unreadResult = await databases.listDocuments<NotificationDocument>(
-      DATABASE_ID,
-      COLLECTION_IDS.NOTIFICATIONS,
-      [
-        Query.equal('user_id', userId),
-        Query.equal('is_read', false),
-        Query.limit(1),
-        Query.select(['$id']),
-      ]
-    );
-
     return {
       success: true,
       notifications: result.documents,
-      unreadCount: unreadResult.total,
+      unreadCount: result.documents.filter(n => !n.is_read).length,
     };
   } catch (error: any) {
     console.error('Failed to get notifications:', error);

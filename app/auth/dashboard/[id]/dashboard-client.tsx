@@ -1,0 +1,93 @@
+"use client";
+
+import {
+  Breadcrumb,
+  BreadcrumbItem,
+  BreadcrumbList,
+  BreadcrumbPage,
+} from "@/components/ui/breadcrumb";
+import { Separator } from "@/components/ui/separator";
+import { SidebarInset, SidebarTrigger } from "@/components/ui/sidebar";
+import {
+  Empty,
+  EmptyDescription,
+  EmptyHeader,
+  EmptyMedia,
+  EmptyTitle,
+} from "@/components/ui/empty";
+import { Button } from "@/components/ui/button";
+import { FileEmpty02Icon, AttachmentIcon } from "@hugeicons/core-free-icons";
+import { HugeiconsIcon } from "@hugeicons/react";
+import { ReportUploadModal } from "@/components/dashboardComponents/report-upload-modal";
+import { FilmVideoButton } from "@/components/dashboardComponents/film-video-button";
+import { NotificationBell } from "@/components/notifications/notification-bell";
+import { UserAvatarMenu } from "@/components/dashboardComponents/user-avatar-menu";
+import { useUser } from "@/lib/context/user-context";
+import { useRouter } from "next/navigation";
+import { useEffect } from "react";
+
+export default function UserDashboardClient() {
+  const { userId, role } = useUser();
+  const router = useRouter();
+
+  useEffect(() => {
+    if (role === "insurance_adjuster") {
+      router.replace(`/auth/dashboard/${userId}/reports`);
+    }
+  }, [role, userId, router]);
+
+  if (role === "insurance_adjuster") return null;
+
+  return (
+    <SidebarInset>
+      <header className="flex h-16 shrink-0 items-center gap-2">
+        <div className="flex items-center gap-2 px-4 flex-1">
+          <SidebarTrigger className="-ml-1" />
+          <Separator
+            orientation="vertical"
+            className="mr-2 data-[orientation=vertical]:h-4"
+          />
+          <Breadcrumb>
+            <BreadcrumbList>
+              <BreadcrumbItem>
+                <BreadcrumbPage>Dashboard</BreadcrumbPage>
+              </BreadcrumbItem>
+            </BreadcrumbList>
+          </Breadcrumb>
+        </div>
+        <div className="flex items-center gap-1 pr-4">
+          <NotificationBell />
+          <UserAvatarMenu />
+        </div>
+      </header>
+
+      <div className="flex flex-1 flex-col gap-4 p-4 pt-0">
+        <Empty>
+          <EmptyHeader className="flex flex-col items-center gap-2 animate-fade-in-up">
+            <EmptyMedia
+              variant="icon"
+              className="mb-0 size-12 rounded-full bg-primary/10 text-primary ring-8 ring-primary/5 [&_svg:not([class*='size-'])]:size-6"
+            >
+              <HugeiconsIcon icon={FileEmpty02Icon} />
+            </EmptyMedia>
+            <EmptyTitle>Submit a New Report</EmptyTitle>
+            <EmptyDescription>
+              Record a video or upload media to submit a new damage report.
+              Our AI will analyze the damage automatically.
+            </EmptyDescription>
+          </EmptyHeader>
+          <div className="flex flex-col gap-3 w-full max-w-xs mx-auto mt-4">
+            <div className="md:hidden w-full">
+              <FilmVideoButton className="w-full h-12 rounded-2xl text-base" />
+            </div>
+            <ReportUploadModal>
+              <Button variant="secondary" size="lg" className="w-full rounded-2xl">
+                <HugeiconsIcon icon={AttachmentIcon} /> Upload video
+              </Button>
+            </ReportUploadModal>
+          </div>
+        </Empty>
+      </div>
+    </SidebarInset>
+  );
+}

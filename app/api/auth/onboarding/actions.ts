@@ -105,7 +105,7 @@ export async function completeOnboarding(data: OnboardingData) {
       secure: process.env.NODE_ENV === 'production',
       expires: timeToExpire,
     });
-    revalidateTag(`user-doc-${data.userId}`);
+    revalidateTag(`user-doc-${data.userId}`, 'max');
 
     return { success: true };
   } catch (error: any) {

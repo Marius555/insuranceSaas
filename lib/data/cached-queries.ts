@@ -172,7 +172,7 @@ export const getReportsCached = cache(
       tags: isAdjuster
         ? [`reports-company-${insuranceCompanyId}`]
         : [`reports-${userId}`],
-      revalidate: 30,
+      revalidate: 300,
     })(userId, role, insuranceCompanyId);
   }
 );
@@ -269,20 +269,9 @@ async function _fetchNotifications(
       ]
     );
 
-    const unreadResult = await databases.listDocuments<NotificationDocument>(
-      DATABASE_ID,
-      COLLECTION_IDS.NOTIFICATIONS,
-      [
-        Query.equal('user_id', userId),
-        Query.equal('is_read', false),
-        Query.limit(1),
-        Query.select(['$id']),
-      ]
-    );
-
     return {
       notifications: result.documents,
-      unreadCount: unreadResult.total,
+      unreadCount: result.documents.filter(n => !n.is_read).length,
     };
   } catch (error) {
     console.error('Failed to fetch notifications:', error);
@@ -293,7 +282,7 @@ async function _fetchNotifications(
 export const getNotificationsCached = cache((userId: string) =>
   unstable_cache(_fetchNotifications, [`notifications-${userId}`], {
     tags: [`notifications-${userId}`],
-    revalidate: 30,
+    revalidate: 300,
   })(userId)
 );
 
